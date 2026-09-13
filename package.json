@@ -1,7 +1,8 @@
 {
-  "name": "kinesis-smartset-arch",
+  "name": "adv360",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "check": "oxfmt --check && bun run lint && tools/check-layers.sh && tsc --noEmit && bun test && qmllint -I /usr/lib/qt6/qml -I \"${OMARCHY_PATH:-/usr/share/omarchy}/shell\" gui/*.qml gui/components/*.qml omarchy/*.qml && shellcheck install.sh .claude/hooks/fix-and-format.sh && [ \"$(jq -r .version manifest.json)\" = \"$(jq -r .version package.json)\" ] && bun run validate-plugin",

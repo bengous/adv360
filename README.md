@@ -1,4 +1,4 @@
-# kinesis-smartset-arch
+# adv360
 
 Native Linux editor for the Kinesis Advantage360 with the SmartSet engine (the non-ZMK model). Kinesis ships no Linux tool and the SmartSet App breaks under Wine; the keyboard's configuration is a set of text files on its own USB volume (the v-Drive). `adv360` reads them, shows them on a rendered keyboard, edits remaps, macros, tap-and-hold and LEDs, and writes them back with a backup, an atomic write, a read-back and an eject. A human, an agent, or both can drive it: every verb is a CLI call that prints JSON.
 
@@ -7,11 +7,11 @@ Two parts: the `adv360` binary (Bun/TypeScript, compiled, no runtime needed) and
 ## Install on Omarchy
 
 ```
-git clone https://github.com/bengous/kinesis-smartset-arch ~/Work/kinesis-smartset-arch
-cd ~/Work/kinesis-smartset-arch && ./install.sh
+git clone https://github.com/bengous/adv360 ~/Work/adv360
+cd ~/Work/adv360 && ./install.sh
 ```
 
-`install.sh` builds with `bun`, installs `~/.local/bin/adv360` and `~/.local/share/kinesis-smartset-arch/`, adds a `Kinesis Advantage360` entry with its icon to the app launcher (`~/.local/share/applications/adv360.desktop`), and adds a `Kinesis 360` row to the Omarchy menu extension file. It prints the optional Hyprland bind and the optional `omarchy plugin add … --enable` command that runs `adv360 watch` as a shell service (a notification when the v-Drive mounts). It never edits Hyprland config.
+`install.sh` builds with `bun`, installs `~/.local/bin/adv360` and `~/.local/share/adv360/`, adds an `Advantage360 editor` entry with its icon to the app launcher (`~/.local/share/applications/adv360.desktop`), and adds an `Advantage360` row to the Omarchy menu extension file. It prints the optional Hyprland bind and the optional `omarchy plugin add … --enable` command that runs `adv360 watch` as a shell service (a notification when the v-Drive mounts). It never edits Hyprland config.
 
 ## Choreography
 
@@ -89,3 +89,7 @@ Validated on a real Advantage360 (firmware 1.0.69) on 2026-09-13: a remap writte
 ## Development
 
 `bun run check` (format, lint, import direction between `src/model`, `src/io`, `src/app` and `src/cli`, typecheck, tests, qmllint, shellcheck, version match). Real keyboard files under `tests/fixtures/real/` are byte-for-byte copies and never change. Vocabulary in `CONTEXT.md`, rules in `AGENTS.md`.
+
+## License
+
+MIT, see `LICENSE`. Independent project, not affiliated with or endorsed by Kinesis Corporation. Kinesis, Advantage360 and SmartSet are trademarks of Kinesis Corporation.

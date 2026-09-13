@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "io.github.bengous.kinesis-smartset-arch",
-  "name": "Kinesis SmartSet",
+  "id": "io.github.bengous.adv360",
+  "name": "Advantage360 editor",
   "version": "0.1.0",
   "author": "bengous",
   "license": "MIT",

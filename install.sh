@@ -7,7 +7,7 @@
 set -euo pipefail
 
 BINDIR="${BINDIR:-$HOME/.local/bin}"
-SHAREDIR="${SHAREDIR:-$HOME/.local/share/kinesis-smartset-arch}"
+SHAREDIR="${SHAREDIR:-$HOME/.local/share/adv360}"
 APPDIR="${APPDIR:-$HOME/.local/share/applications}"
 ICONDIR="${ICONDIR:-$HOME/.local/share/icons/hicolor/256x256/apps}"
 MENU_EXT="${MENU_EXT:-$HOME/.config/omarchy/extensions/omarchy-menu.jsonc}"
@@ -40,20 +40,20 @@ if [[ -f $MENU_EXT ]] && ! grep -q '"kinesis"' "$MENU_EXT"; then
   entry="$(cat omarchy/menu-entry.jsonc)"
   awk -v entry="$entry" 'BEGIN { done = 0 } { print } /^[[:space:]]*\{[[:space:]]*$/ && !done { print entry; done = 1 }' "$MENU_EXT" >"$tmp/menu.jsonc"
   cp -- "$tmp/menu.jsonc" "$MENU_EXT"
-  echo "added the Kinesis 360 row to $MENU_EXT"
+  echo "added the Advantage360 row to $MENU_EXT"
 fi
 
 cat <<EOF
 installed $BINDIR/adv360 and $SHAREDIR
 version: $("$BINDIR/adv360" vdrive status | jq -r .version)
 EOF
-if [[ $SHAREDIR != "$HOME/.local/share/kinesis-smartset-arch" ]]; then
-  echo "note: the binary looks for gui files under ~/.local/share/kinesis-smartset-arch; export ADV360_SHARE_DIR=$SHAREDIR"
+if [[ $SHAREDIR != "$HOME/.local/share/adv360" ]]; then
+  echo "note: the binary looks for gui files under ~/.local/share/adv360; export ADV360_SHARE_DIR=$SHAREDIR"
 fi
 cat <<EOF
 
 Optional, paste into ~/.config/hypr/bindings.lua:
-  o.bind("SUPER + SHIFT + K", "Kinesis editor", "adv360 gui")
+  o.bind("SUPER + SHIFT + K", "Advantage360 editor", "adv360 gui")
 
 Optional, mount notification with no GUI open (Omarchy service plugin):
   omarchy plugin add $here --enable

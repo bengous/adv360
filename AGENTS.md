@@ -1,4 +1,4 @@
-# kinesis-smartset-arch
+# adv360
 
 Native Omarchy editor for the Kinesis Advantage360 (SmartSet engine) v-Drive: one `adv360` binary (Bun/TypeScript) speaking JSON on stdout, a Quickshell QML GUI on top. Vocabulary: `CONTEXT.md`. Verbs, states, write cycle: `docs/capabilities.md`. Stack decision: `docs/adr/0001-stack.md`.
 

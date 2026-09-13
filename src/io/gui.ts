@@ -17,7 +17,7 @@ export function shareDir(): string {
   return (
     process.env["ADV360_SHARE_DIR"] ??
     (COMPILED
-      ? join(homedir(), ".local", "share", "kinesis-smartset-arch")
+      ? join(homedir(), ".local", "share", "adv360")
       : join(import.meta.dir, "..", ".."))
   );
 }

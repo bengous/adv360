@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Kinesis Advantage360
+Name=Advantage360 editor
 Comment=Edit the Advantage360 layout on the v-Drive
 Exec=adv360 gui
 TryExec=adv360
