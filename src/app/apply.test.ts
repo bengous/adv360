@@ -73,6 +73,15 @@ describe("apply on the mounted v-Drive", () => {
     );
   });
 
+  test("given a tmp left by a killed writer, when applying, then it is swept from the volume", async () => {
+    const stale = join(fx.mount, "lighting", ".led9.txt.adv360-tmp");
+    await Bun.write(stale, "half");
+
+    await adv(fx.deps, "apply", "--profile", "9");
+
+    expect(await Bun.file(stale).exists()).toBe(false);
+  });
+
   test("given an apply, when it succeeds, then the device is unmounted, the human notified and the record ejected", async () => {
     await adv(fx.deps, "apply", "--profile", "9");
 

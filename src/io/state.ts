@@ -48,10 +48,16 @@ export async function saveRecord(
 }
 
 // The record file is the lock: wx fails when a cycle is already recorded.
+// A failed record never blocks a new cycle: restoring from the backup must stay possible.
 export async function createRecord(
   stateDir: string,
   record: WriteRecord,
+  prior: WriteRecord | null,
 ): Promise<void> {
+  if (prior?.phase.kind === "failed") {
+    await clearRecord(stateDir);
+  }
+
   await mkdir(stateDir, { recursive: true });
   let fh;
 

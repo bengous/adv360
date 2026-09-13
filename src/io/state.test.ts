@@ -22,10 +22,10 @@ beforeEach(async () => {
 
 describe("write record file", () => {
   test("given a recorded cycle, when creating another, then it is write-in-progress", async () => {
-    await createRecord(stateDir, recordOf(9, { kind: "writing" }));
+    await createRecord(stateDir, recordOf(9, { kind: "writing" }), null);
 
     const failure = await rejection(
-      createRecord(stateDir, recordOf(1, { kind: "writing" })),
+      createRecord(stateDir, recordOf(1, { kind: "writing" }), null),
     );
 
     expect(failure.message).toContain("another write cycle");

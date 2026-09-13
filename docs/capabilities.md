@@ -38,7 +38,7 @@ Source resolution: `--source DIR`, else the mounted v-Drive, else error `not-mou
 1. print `{"event":"plan"}` naming every side effect (`--dry-run` stops here).
 2. create the record `writing`.
 3. backup + fsync (failure: record removed, `backup-failed`).
-4. write `.<name>.adv360-tmp` on the same volume + fsync (failure: tmp removed, record removed, `write-failed`).
+4. remove any `*.adv360-tmp` left by a killed writer, then write `.<name>.adv360-tmp` on the same volume + fsync (failure: tmp removed, record removed, `write-failed`).
 5. rename + fsync dir (failure: `failed{rename}` → corrupt-suspected).
 6. read back and compare (mismatch: `failed{readback}` → corrupt-suspected).
 7. record `written`.

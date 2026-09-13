@@ -1,4 +1,4 @@
-import { open, readdir } from "node:fs/promises";
+import { open, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import { KINDS, relOf } from "../model/source.ts";
@@ -68,16 +68,31 @@ export async function listDir(dir: string): Promise<string[]> {
 
 const PROFILE_FILE = /^(layout|led)[1-9]\.txt$/;
 
+const PROFILE_DIRS = ["layouts", "lighting"];
+
+export const TMP_SUFFIX = ".adv360-tmp";
+
 export async function listNamedBackups(dir: string): Promise<string[]> {
   const out: string[] = [];
 
-  for (const sub of ["layouts", "lighting"]) {
+  for (const sub of PROFILE_DIRS) {
     for (const name of await listDir(join(dir, sub))) {
-      if (!PROFILE_FILE.test(name)) {
+      if (!PROFILE_FILE.test(name) && !name.endsWith(TMP_SUFFIX)) {
         out.push(`${sub}/${name}`);
       }
     }
   }
 
   return out;
+}
+
+// A writer killed mid-cycle leaves its tmp files on the volume; no finalizer covers that.
+export async function sweepTmps(dir: string): Promise<void> {
+  for (const sub of PROFILE_DIRS) {
+    for (const name of await listDir(join(dir, sub))) {
+      if (name.endsWith(TMP_SUFFIX)) {
+        await rm(join(dir, sub, name), { force: true });
+      }
+    }
+  }
 }

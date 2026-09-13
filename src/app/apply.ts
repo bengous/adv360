@@ -4,7 +4,14 @@ import { basename, dirname, join } from "node:path";
 import { CliError, messageOf } from "../errors.ts";
 import { backup, backupDir } from "../io/backup.ts";
 import type { Deps } from "../io/deps.ts";
-import { readDisk, readText, syncDir, writeSynced } from "../io/disk.ts";
+import {
+  readDisk,
+  readText,
+  sweepTmps,
+  syncDir,
+  TMP_SUFFIX,
+  writeSynced,
+} from "../io/disk.ts";
 import {
   clearRecord,
   createRecord,
@@ -48,20 +55,7 @@ export async function applySession(
 }
 
 function tmpOf(plan: Plan, rel: string): string {
-  return join(plan.source.dir, dirname(rel), `.${basename(rel)}.adv360-tmp`);
-}
-
-// A failed record never blocks a new cycle: restoring from the backup must stay possible.
-async function lockRecord(
-  deps: Deps,
-  record: WriteRecord,
-  prior: WriteRecord | null,
-): Promise<void> {
-  if (prior?.phase.kind === "failed") {
-    await clearRecord(deps.stateDir);
-  }
-
-  await createRecord(deps.stateDir, record);
+  return join(plan.source.dir, dirname(rel), `.${basename(rel)}${TMP_SUFFIX}`);
 }
 
 async function backupStep(deps: Deps, plan: Plan): Promise<void> {
@@ -78,6 +72,8 @@ async function backupStep(deps: Deps, plan: Plan): Promise<void> {
 
 async function writeTmps(deps: Deps, plan: Plan): Promise<void> {
   try {
+    await sweepTmps(plan.source.dir);
+
     for (const f of plan.files) {
       await writeSynced(tmpOf(plan, f.rel), f.content);
     }
@@ -150,7 +146,7 @@ export async function executePlan(
   prior: WriteRecord | null,
 ): Promise<ApplyReport> {
   const record = recordFor(plan, deps.now().toISOString());
-  await lockRecord(deps, record, prior);
+  await createRecord(deps.stateDir, record, prior);
   await backupStep(deps, plan);
   await writeTmps(deps, plan);
   await commitFiles(deps, plan, record);

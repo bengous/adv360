@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { join } from "node:path";
 
 import { parseMacroTokens } from "../model/txt/layout.ts";
-import { FIXTURES } from "../testkit.ts";
+import { FIXTURES, mountFixture } from "../testkit.ts";
 import { inspect } from "./inspect.ts";
 
 describe("inspect on the keyboard mirror", () => {
@@ -17,6 +18,15 @@ describe("inspect on the keyboard mirror", () => {
     expect(report.profiles.flatMap((p) => p.layout?.warnings ?? [])).toEqual(
       [],
     );
+  });
+
+  test("given a tmp left by a killed writer, when inspecting, then it is not listed as a backup", async () => {
+    const fx = await mountFixture();
+    await Bun.write(join(fx.mount, "layouts", ".layout9.txt.adv360-tmp"), "");
+
+    const report = await inspect(fx.mount);
+
+    expect(report.backups).toEqual(["layouts/layout1.txt.backup"]);
   });
 
   test("given profile 1 and 2, when inspecting, then the remap counts and the lctr+hk3 macro match the files", async () => {
