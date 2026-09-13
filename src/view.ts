@@ -1,5 +1,6 @@
 import keyboard from "../data/keyboard.json";
 import tokens from "../data/tokens.json";
+import { renderLayout, renderLed, type Session } from "./session.ts";
 import { layoutRel, ledRel, readText, type Profile } from "./source.ts";
 import { effectiveLayer, parseLayout, type LayerName } from "./txt/layout.ts";
 import { effectiveLeds, parseLed, type EffectiveIndicator, type Indicator } from "./txt/led.ts";
@@ -39,15 +40,14 @@ export type ViewReport = {
   profile: Profile;
   layer: LayerName;
   layout: string | null;
-  keys: ViewKey[];
+  keys: (ViewKey & { pending: boolean })[];
   leds: Record<Indicator, EffectiveIndicator> | null;
+  session: boolean;
 };
 
-export async function view(source: string, profile: Profile, layer: LayerName): Promise<ViewReport> {
-  const layoutText = await readText(source, layoutRel(profile));
-  const ledText = await readText(source, ledRel(profile));
-  const effective = effectiveLayer(parseLayout(layoutText ?? ""), layer);
-  const keys = keyboard.keys.map(({ position }): ViewKey => {
+function layerKeys(text: string, layer: LayerName): ViewKey[] {
+  const effective = effectiveLayer(parseLayout(text), layer);
+  return keyboard.keys.map(({ position }): ViewKey => {
     const macros: ViewMacro[] = [];
     for (const { line, entry } of effective.macros.values()) {
       if (entry.trigger.toLowerCase() === position) macros.push({ cotrigger: entry.cotrigger, tokens: entry.tokens, line });
@@ -70,11 +70,24 @@ export async function view(source: string, profile: Profile, layer: LayerName): 
       macros,
     };
   });
+}
+
+// With a session, keys show the pending render; `pending` marks the ones that differ from the disk.
+export async function view(source: string, profile: Profile, layer: LayerName, session: Session | null = null): Promise<ViewReport> {
+  const layoutText = await readText(source, layoutRel(profile));
+  const ledText = await readText(source, ledRel(profile));
+  const onDisk = layerKeys(layoutText ?? "", layer);
+  const rendered = session ? renderLayout(session) : null;
+  const shown = rendered === null ? onDisk : layerKeys(rendered, layer);
+  const keys = shown.map((key, i) => ({ ...key, pending: JSON.stringify(key) !== JSON.stringify(onDisk[i]) }));
+  const ledShown = session ? renderLed(session) : null;
+  const leds = ledShown ?? ledText;
   return {
     profile,
     layer,
     layout: layoutText === null ? null : layoutRel(profile),
     keys,
-    leds: ledText === null ? null : effectiveLeds(parseLed(ledText)),
+    leds: leds === null ? null : effectiveLeds(parseLed(leds)),
+    session: session !== null,
   };
 }

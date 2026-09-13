@@ -41,7 +41,7 @@ describe("view on the keyboard mirror", () => {
     expect(keys.get("rctr")).toMatchObject({ kind: "remap", action: "caxx", label: "Ctrl+Alt", line: 5 });
     expect(keys.get("rshf")).toMatchObject({ kind: "remap", action: "prnt", label: "Print Scrn" });
     expect(keys.get("q")).toMatchObject({ kind: "default", action: "q", label: "Q" });
-    expect(keys.get("hk3")).toEqual({ position: "hk3", kind: "default", action: null, label: "", macros: [] });
+    expect(keys.get("hk3")).toEqual({ position: "hk3", kind: "default", action: null, label: "", macros: [], pending: false });
     expect(keys.size).toBe(77);
   });
 

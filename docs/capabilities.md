@@ -1,6 +1,6 @@
 # Capabilities
 
-Every verb is `adv360 <verb> [flags]`, prints one JSON value on stdout, exits 0 on success, 1 with `{"error":"<kebab-name>", ...fields, "message"}` on a named failure, 2 on usage. Schemas evolve additively.
+Every verb is `adv360 <verb> [flags]`, prints one JSON value per line on stdout (one line for every verb except `apply`, which prints the plan first, and `watch`), exits 0 on success, 1 with `{"error":"<kebab-name>", ...fields, "message"}` on a named failure, 2 on usage (text on stderr). Schemas evolve additively. `adv360` without a verb prints the flag reference.
 
 | Verb | Trigger | Reads | Transitions / side effect |
 |---|---|---|---|
@@ -48,7 +48,9 @@ Source resolution: `--source DIR`, else the mounted v-Drive, else error `not-mou
 
 Under `--source` steps 8-10 are skipped. Layout and LED of one profile are written in one cycle, one eject.
 
-`apply` rejects `not-mounted`, `no-session`, `session-conflict`, `write-pending`, `write-in-progress`; `failed` does not block a new apply (restore must stay possible).
+`apply` rejects `not-mounted`, `no-session`, `no-change`, `session-conflict`, `write-pending`, `write-in-progress`; `failed` does not block a new apply (restore must stay possible). A `written` record for the same profile makes `apply` retry only the eject (`{"event":"retry-eject"}`).
+
+Other named errors: `bad-profile`, `layer-missing`, `no-base` (first edit with no readable disk), `file-missing` (`load-file`), `restore-source-missing`, `no-write-record` (`verify`), `backup-failed`, `write-failed`, `corrupt-suspected` (rename or read-back failed), `eject-failed`, `lsblk-missing` / `lsblk-failed`, `udisksctl-missing`, `diff-failed`.
 
 ## Deferred to v2
 

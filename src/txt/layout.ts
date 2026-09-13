@@ -75,6 +75,92 @@ export function serializeLayout(layout: Layout): string {
   return joinLines(layout.lines);
 }
 
+export type LayoutEdit =
+  | { op: "set-remap"; layer: LayerName; position: string; action: string }
+  | { op: "set-taphold"; layer: LayerName; position: string; tap: string; ms: number; hold: string }
+  | { op: "set-macro"; layer: LayerName; trigger: string; cotrigger: string | null; tokens: string[] }
+  | { op: "remove"; layer: LayerName; position: string }
+  | { op: "remove-macro"; layer: LayerName; trigger: string; cotrigger: string | null }
+  | { op: "replace-file"; text: string };
+
+export function renderEntry(edit: Exclude<LayoutEdit, { op: "remove" | "remove-macro" | "replace-file" }>): string {
+  switch (edit.op) {
+    case "set-remap":
+      return `[${edit.position}]>[${edit.action}]`;
+    case "set-taphold":
+      return `[${edit.position}]>[${edit.tap}][t&h${String(edit.ms).padStart(3, "0")}][${edit.hold}]`;
+    case "set-macro":
+      return `${edit.cotrigger ? `{${edit.cotrigger}}` : ""}{${edit.trigger}}>${edit.tokens.map((t) => `{${t}}`).join("")}`;
+    default:
+      return edit satisfies never;
+  }
+}
+
+function layerOfLine(layout: Layout): (LayerName | null)[] {
+  let current: LayerName | null = null;
+  return layout.lines.map(({ entry }) => (entry.kind === "header" ? (current = entry.layer) : current));
+}
+
+function eolOf(raw: string, fallback: Eol): string {
+  return /\r?\n$/.exec(raw)?.[0] ?? fallback;
+}
+
+function makeLine(text: string, eol: string): LayoutLine {
+  return { raw: text + eol, text, entry: parseEntry(text) };
+}
+
+function matches(entry: Entry, edit: LayoutEdit): boolean {
+  switch (edit.op) {
+    case "set-remap":
+    case "set-taphold":
+    case "remove":
+      return (entry.kind === "remap" || entry.kind === "taphold") && entry.position.toLowerCase() === edit.position.toLowerCase();
+    case "set-macro":
+    case "remove-macro":
+      return entry.kind === "macro" && macroKey(entry.trigger, entry.cotrigger) === macroKey(edit.trigger, edit.cotrigger);
+    case "replace-file":
+      return false;
+    default:
+      return edit satisfies never;
+  }
+}
+
+export class LayerMissing extends Error {
+  constructor(readonly layer: LayerName) {
+    super(`layer header <${layer}> is missing; the file is not repaired`);
+  }
+}
+
+// Firmware rule: the last line wins, so an edit rewrites the last matching line of the layer
+// or appends after the layer's last non-blank line. Every other byte of the file is kept.
+export function applyLayoutEdit(layout: Layout, edit: LayoutEdit): Layout {
+  if (edit.op === "replace-file") return parseLayout(edit.text);
+  const layers = layerOfLine(layout);
+  const inLayer = (i: number) => layers[i] === edit.layer;
+  const lines = [...layout.lines];
+  if (edit.op === "remove" || edit.op === "remove-macro") {
+    return { ...layout, lines: lines.filter((l, i) => !(inLayer(i) && matches(l.entry, edit))) };
+  }
+  const text = renderEntry(edit);
+  let last = -1;
+  lines.forEach((l, i) => {
+    if (inLayer(i) && matches(l.entry, edit)) last = i;
+  });
+  if (last >= 0) {
+    lines[last] = makeLine(text, eolOf(lines[last]!.raw, layout.eol));
+    return { ...layout, lines };
+  }
+  let end = -1;
+  lines.forEach((l, i) => {
+    if (inLayer(i) && l.entry.kind !== "blank") end = i;
+  });
+  if (end < 0) throw new LayerMissing(edit.layer);
+  const tail = lines[end]!;
+  if (!/\n$/.test(tail.raw)) lines[end] = { ...tail, raw: tail.raw + layout.eol };
+  lines.splice(end + 1, 0, makeLine(text, layout.eol));
+  return { ...layout, lines };
+}
+
 export type Located<E> = { line: number; entry: E };
 export type EffectiveLayer = {
   keys: Map<string, Located<Remap | TapHold>>;
