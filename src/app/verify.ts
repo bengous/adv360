@@ -18,18 +18,24 @@ export type VerifyReport = {
   files: VerifiedFile[];
 };
 
-async function hashesOf(
+async function readFiles(
   source: Source,
   record: WriteRecord,
-): Promise<(string | null)[]> {
-  const hashes: (string | null)[] = [];
+): Promise<VerifiedFile[]> {
+  const files: VerifiedFile[] = [];
 
   for (const f of record.files) {
     const text = await readText(source.dir, f.rel);
-    hashes.push(text === null ? null : sha256(text));
+
+    files.push({
+      rel: f.rel,
+      before: f.before,
+      expected: f.after,
+      actual: text === null ? null : sha256(text),
+    });
   }
 
-  return hashes;
+  return files;
 }
 
 async function applyVerdict(deps: Deps, verdict: Verdict): Promise<void> {
@@ -63,7 +69,7 @@ export async function verify(
   source: Source,
 ): Promise<VerifyReport> {
   const record = pendingRecord(await loadRecord(deps.stateDir));
-  const verdict = decideVerify(record, await hashesOf(source, record));
+  const verdict = decideVerify(record, await readFiles(source, record));
   await applyVerdict(deps, verdict);
 
   return {

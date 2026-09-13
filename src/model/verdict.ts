@@ -5,6 +5,7 @@ export type VerifyResult = "verified" | "unchanged" | "mismatch";
 
 export type VerifiedFile = {
   rel: string;
+  before: string | null;
   expected: string;
   actual: string | null;
 };
@@ -34,17 +35,11 @@ export function pendingRecord(record: WriteRecord | null): WriteRecord {
 // verified: every file hashes as written; unchanged: as before the write; else mismatch.
 export function decideVerify(
   record: WriteRecord,
-  actualHashes: (string | null)[],
+  files: VerifiedFile[],
 ): Verdict {
-  const files = record.files.map((f, i) => ({
-    rel: f.rel,
-    expected: f.after,
-    actual: actualHashes[i] ?? null,
-  }));
-
   const result: VerifyResult = files.every((f) => f.actual === f.expected)
     ? "verified"
-    : files.every((f, i) => f.actual === record.files[i]?.before)
+    : files.every((f) => f.actual === f.before)
       ? "unchanged"
       : "mismatch";
 
