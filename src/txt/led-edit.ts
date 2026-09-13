@@ -11,10 +11,7 @@ export type LedEdit =
   | { op: "replace-file"; text: string };
 
 // `--rgb R,G,B` colours the function itself; `--rgb layd=R,G,B` one layer of `--func layer`.
-export function parseLedColors(
-  specs: readonly string[],
-  func: string,
-): LedColors {
+export function parseLedColors(specs: readonly string[], func: string) {
   const colors: LedColors = {};
 
   for (const spec of specs) {
