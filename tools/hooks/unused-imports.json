@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "eslint/no-unused-vars": [
+      "error",
+      { "fix": { "imports": "safe-fix", "variables": "off" } }
+    ]
+  }
+}
