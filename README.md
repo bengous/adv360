@@ -82,6 +82,10 @@ adv360 verify
 | `omarchy-notification-send` | notifications | a warning on stderr, nothing else |
 | `bun` | building only | `install.sh` stops |
 
+## Status
+
+Validated on a real Advantage360 (firmware 1.0.69) on 2026-09-13: a remap written to profile 9, reloaded, verified, then restored from the backup and verified again, with profile 1 untouched. Journal and open points: `research/session-2026-09-13.md`.
+
 ## Development
 
 `bun run check` (typecheck, tests, qmllint, shellcheck, version match). Real keyboard files under `tests/fixtures/real/` are byte-for-byte copies and never change. Vocabulary in `CONTEXT.md`, rules in `AGENTS.md`, the SmartSet App research under `research/`.
