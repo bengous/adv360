@@ -44,6 +44,11 @@ function partWith<E>(
   };
 }
 
+// Rendering is the only check that a layer edit targets a header the file has (LayerMissing).
+function assertRenders(session: Session): void {
+  render(session, "layout");
+}
+
 function addEdit(ctx: SessionContext, edit: Edit): Session {
   const { session, profile, disk } = ctx;
   const next: Session = session ? structuredClone(session) : { profile };
@@ -51,6 +56,7 @@ function addEdit(ctx: SessionContext, edit: Edit): Session {
   switch (edit.kind) {
     case "layout":
       next.layout = partWith(next.layout, disk?.layout, edit.edit, "layout");
+      assertRenders(next);
       break;
     case "led":
       next.led = partWith(next.led, disk?.led, edit.edit, "led file");
@@ -58,8 +64,6 @@ function addEdit(ctx: SessionContext, edit: Edit): Session {
     default:
       edit satisfies never;
   }
-
-  render(next, "layout");
 
   return next;
 }
