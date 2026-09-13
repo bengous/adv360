@@ -41,7 +41,9 @@ type Report = { entries: InspectEntry[]; warnings: Warning[] };
 
 const eolName = (eol: Eol) => (eol === "\r\n" ? "crlf" : "lf");
 
-function unwrapLayout(entry: Entry): { entry: Entry; disabled: boolean } {
+type Unwrapped<E> = { entry: E; disabled: boolean };
+
+function unwrapLayout(entry: Entry): Unwrapped<Entry> {
   let e = entry;
 
   while (e.kind === "disabled") {
@@ -51,7 +53,7 @@ function unwrapLayout(entry: Entry): { entry: Entry; disabled: boolean } {
   return { entry: e, disabled: e !== entry };
 }
 
-function unwrapLed(entry: LedEntry): { entry: LedEntry; disabled: boolean } {
+function unwrapLed(entry: LedEntry): Unwrapped<LedEntry> {
   let e = entry;
 
   while (e.kind === "disabled") {

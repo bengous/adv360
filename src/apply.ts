@@ -29,11 +29,8 @@ export async function applyVerb(
 ): Promise<ApplyReport | DryRunReport> {
   const disk = await readDisk(source.dir, profile);
   const ctx = await loadContext(deps.stateDir, profile, disk);
-  const decision = decideApply(
-    ctx,
-    source,
-    backupDir(deps.stateDir, deps.now()),
-  );
+  const dir = backupDir(deps.stateDir, deps.now());
+  const decision = decideApply(ctx, source, dir);
 
   if (decision.kind === "retry-eject") {
     deps.emit(JSON.stringify({ event: "retry-eject", device: source.device }));

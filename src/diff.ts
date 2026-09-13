@@ -12,10 +12,9 @@ import { loadContext } from "./state.ts";
 
 export type DiffTarget = { rel: string; before: string; after: string };
 
-export function diffTargets(ctx: SessionContext): {
-  state: SessionState;
-  targets: DiffTarget[];
-} {
+export type DiffDecision = { state: SessionState; targets: DiffTarget[] };
+
+export function diffTargets(ctx: SessionContext): DiffDecision {
   const { session, profile } = ctx;
 
   if (!session) {

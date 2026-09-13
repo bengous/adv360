@@ -114,9 +114,11 @@ async function unmount(device: string): Promise<void> {
   }
 }
 
-export function realDeps(): Deps {
-  const warn = (line: string) => console.error(line);
+function warn(line: string): void {
+  console.error(line);
+}
 
+export function realDeps(): Deps {
   return {
     stateDir: defaultStateDir(),
     sourceEnv: process.env["ADV360_SOURCE"] ?? null,
