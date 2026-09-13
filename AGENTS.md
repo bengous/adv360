@@ -8,7 +8,7 @@ Native Omarchy editor for the Kinesis Advantage360 (SmartSet engine) v-Drive: on
 
 1. Types first: `code-design-rules.md` (a rule lives in one `parse*` beside its type; data clumps get a type; exceptions propagate to `run()` in `src/main.ts`, the single handler).
 2. Then decide/apply: `hexagonal-architecture-rules.md` and `design-patterns.md` (every verb is gather → pure decide → apply; the decide phase is tested on plain data).
-3. Then layers: nothing imports `main.ts`; `deps.ts` is imported by use cases, `status.ts` and `main.ts` only.
+3. Then layers: `txt/*` → `source.ts` → pure decisions (`record`, `session`, `edit`, `vdrive`, `plan`, `verify`, `restore`, `diff`) → fs adapters (`disk`, `state`, `backup`) → use cases (`apply`, `session-edit`, `status`) → `verbs.ts` → `main.ts`. Nothing imports `main.ts`; `deps.ts` (the ports) is imported by the use cases, `verbs.ts`, `main.ts` and `vdrive.ts` (the `Observation` type) only.
 4. Tests: `testing-rules.md` (`given …, when …, then …` names, ≤10 statements, whole-object `toEqual`, fakes at the ports, `adapter-contract-testing.md` keeps the fake honest).
 
 ## Recorded decisions
