@@ -1,29 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
+import { decodeObject } from "./decode.ts";
+import { fakeDeps } from "./deps-fake.ts";
 import { inspect } from "./inspect.ts";
+import { run } from "./main.ts";
 import { parseMacroTokens } from "./txt/layout.ts";
 import { view } from "./view.ts";
 
 const REAL = join(import.meta.dir, "../tests/fixtures/real");
 
-async function run(...args: string[]) {
-  const p = Bun.spawn(["bun", join(import.meta.dir, "main.ts"), ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-
-  const [stdout, stderr] = await Promise.all([
-    new Response(p.stdout).text(),
-    new Response(p.stderr).text(),
-  ]);
-
-  return { code: await p.exited, stdout, stderr };
-}
-
 describe("inspect on the keyboard mirror", () => {
-  test("reports 9 profiles, the active one, the firmware and the named backup", async () => {
+  test("given the mirror, when inspecting, then 9 profiles, the active one, the firmware and the named backup show", async () => {
     const report = await inspect(REAL);
+
     expect(report.profiles.map((p) => p.profile)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9,
     ]);
@@ -35,14 +25,14 @@ describe("inspect on the keyboard mirror", () => {
     );
   });
 
-  test("layout1 has 4 base remaps and 3 per other layer; layout2 carries the lctr+hk3 macro", async () => {
+  test("given profile 1 and 2, when inspecting, then the remap counts and the lctr+hk3 macro match the files", async () => {
     const [p1, p2] = (await inspect(REAL)).profiles;
-    const remaps = p1!.layout!.entries.filter((e) => e["kind"] === "remap");
-    expect(remaps.length).toBe(16);
-    expect(remaps.filter((e) => e["layer"] === "base").length).toBe(4);
-    expect(p1!.led!.entries.length).toBe(14);
-    const macro = p2!.layout!.entries.find((e) => e["kind"] === "macro");
-    expect(macro).toEqual({
+    const remaps = p1!.layout!.entries.filter((e) => e.kind === "remap");
+
+    expect(remaps).toHaveLength(16);
+    expect(remaps.filter((e) => e.layer === "base")).toHaveLength(4);
+    expect(p1!.led!.entries).toHaveLength(14);
+    expect(p2!.layout!.entries.find((e) => e.kind === "macro")).toEqual({
       line: 6,
       layer: "base",
       kind: "macro",
@@ -53,10 +43,11 @@ describe("inspect on the keyboard mirror", () => {
     });
   });
 
-  test("--profile narrows to one profile; an empty layout reports headers only", async () => {
+  test("given --profile 9, when inspecting, then one empty profile reports headers only", async () => {
     const report = await inspect(REAL, 9);
-    expect(report.profiles.length).toBe(1);
-    expect(report.profiles[0]!.layout!.entries.map((e) => e["kind"])).toEqual([
+
+    expect(report.profiles).toHaveLength(1);
+    expect(report.profiles[0]!.layout!.entries.map((e) => e.kind)).toEqual([
       "header",
       "header",
       "header",
@@ -66,11 +57,15 @@ describe("inspect on the keyboard mirror", () => {
   });
 });
 
+const keysOf = async (
+  profile: 1 | 2 | 9,
+  layer: "base" | "keypad" | "function1",
+) =>
+  new Map((await view(REAL, profile, layer)).keys.map((k) => [k.position, k]));
+
 describe("view on the keyboard mirror", () => {
-  test("profile 1 base: rctr → caxx, rshf → prnt, q default, hk3 empty", async () => {
-    const keys = new Map(
-      (await view(REAL, 1, "base")).keys.map((k) => [k.position, k]),
-    );
+  test("given profile 1 base, when viewing, then remaps, defaults and an empty hotkey show", async () => {
+    const keys = await keysOf(1, "base");
 
     expect(keys.get("rctr")).toMatchObject({
       kind: "remap",
@@ -99,24 +94,26 @@ describe("view on the keyboard mirror", () => {
     expect(keys.size).toBe(77);
   });
 
-  test("profile 2 base: hk3 carries the lctr macro and stays default", async () => {
+  test("given profile 2 base, when viewing, then hk3 carries the lctr macro and stays default", async () => {
     const report = await view(REAL, 2, "base");
-    const hk3 = report.keys.find((k) => k.position === "hk3")!;
-    expect(hk3.kind).toBe("default");
-    expect(hk3.macros).toEqual([
-      {
-        cotrigger: "lctr",
-        tokens: parseMacroTokens("{s5}{x1}{lshf}{F6}"),
-        line: 6,
-      },
-    ]);
+    const hk3 = report.keys.find((k) => k.position === "hk3");
+
+    expect(hk3).toMatchObject({
+      kind: "default",
+      macros: [
+        {
+          cotrigger: "lctr",
+          tokens: parseMacroTokens("{s5}{x1}{lshf}{F6}"),
+          line: 6,
+        },
+      ],
+    });
     expect(report.leds!.IND3.function).toBe("layer");
   });
 
-  test("layer defaults fall back to base; keypad and fn layers carry their own", async () => {
-    const kp = new Map(
-      (await view(REAL, 9, "keypad")).keys.map((k) => [k.position, k]),
-    );
+  test("given the keypad and fn1 layers, when viewing, then their defaults fall back to base", async () => {
+    const kp = await keysOf(9, "keypad");
+    const fn1 = await keysOf(9, "function1");
 
     expect(kp.get("u")).toMatchObject({
       kind: "default",
@@ -124,11 +121,6 @@ describe("view on the keyboard mirror", () => {
       label: "7",
     });
     expect(kp.get("a")).toMatchObject({ kind: "default", action: "a" });
-
-    const fn1 = new Map(
-      (await view(REAL, 9, "function1")).keys.map((k) => [k.position, k]),
-    );
-
     expect(fn1.get("eql")).toMatchObject({ action: "f1", label: "F1" });
     expect(fn1.get("lfn")).toMatchObject({
       action: "defs",
@@ -137,9 +129,16 @@ describe("view on the keyboard mirror", () => {
   });
 });
 
+const call = async (...argv: string[]) => {
+  const deps = fakeDeps("/nowhere");
+  const code = await run(argv, deps);
+
+  return { code, out: deps.lines, err: deps.warnings };
+};
+
 describe("adv360 exit codes", () => {
-  test("0 with JSON, 1 with a named error, 2 on usage", async () => {
-    const ok = await run(
+  test("given a valid verb, when running, then exit 0 with one JSON line", async () => {
+    const ok = await call(
       "view",
       "--source",
       REAL,
@@ -150,35 +149,49 @@ describe("adv360 exit codes", () => {
     );
 
     expect(ok.code).toBe(0);
-    expect(JSON.parse(ok.stdout).layer).toBe("function1");
+    expect(decodeObject(ok.out[0] ?? "", "line")).toMatchObject({
+      layer: "function1",
+    });
+  });
 
-    const notMounted = await run("inspect");
-    expect(notMounted.code).toBe(1);
-    expect(JSON.parse(notMounted.stdout)).toMatchObject({
-      error: "not-mounted",
-      next: "SmartSet + Hotkey 3",
+  test.each([
+    [["inspect"], "not-mounted"],
+    [
+      ["view", "--source", REAL, "--profile", "12", "--layer", "base"],
+      "bad-profile",
+    ],
+  ])(
+    "given %j, when running, then exit 1 with error %s on stdout",
+    async (argv, error) => {
+      const reply = await call(...argv);
+
+      expect(reply.code).toBe(1);
+      expect(decodeObject(reply.out[0] ?? "", "line")).toMatchObject({ error });
+    },
+  );
+
+  test.each([
+    ["frob"],
+    ["view", "--source", REAL, "--profile", "1", "--layer", "nope"],
+    ["inspect", "--bogus"],
+    [],
+  ])(
+    "given %j, when running, then exit 2 with the usage on stderr",
+    async (...argv) => {
+      const reply = await call(...argv);
+
+      expect(reply.code).toBe(2);
+      expect(reply.out).toEqual([]);
+      expect(reply.err[0]).toContain("usage:");
+    },
+  );
+
+  test("given the binary entry point, when a verb is unknown, then the process exits 2", async () => {
+    const proc = Bun.spawn(["bun", join(import.meta.dir, "main.ts"), "frob"], {
+      stdout: "pipe",
+      stderr: "pipe",
     });
 
-    const badProfile = await run(
-      "view",
-      "--source",
-      REAL,
-      "--profile",
-      "12",
-      "--layer",
-      "base",
-    );
-
-    expect(badProfile.code).toBe(1);
-    expect(JSON.parse(badProfile.stdout).error).toBe("bad-profile");
-
-    const usage = await run("frob");
-    expect(usage.code).toBe(2);
-    expect(usage.stderr).toContain("usage:");
-    expect(
-      (await run("view", "--source", REAL, "--profile", "1", "--layer", "nope"))
-        .code,
-    ).toBe(2);
-    expect((await run("inspect", "--bogus")).code).toBe(2);
+    expect(await proc.exited).toBe(2);
   });
 });

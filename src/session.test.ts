@@ -2,9 +2,11 @@ import { describe, expect, test } from "bun:test";
 
 import type { WriteRecord } from "./record.ts";
 import { decideEdit, deriveState, render } from "./session.ts";
-import type { Session, SessionContext } from "./session.ts";
+import type { Session, SessionContext, SessionState } from "./session.ts";
 import type { Disk } from "./source.ts";
+import { recordOf } from "./testkit.ts";
 import { applyLayoutEdit, LayerMissing } from "./txt/layout-edit.ts";
+import type { LayoutEdit } from "./txt/layout-edit.ts";
 import {
   parseLayout,
   parseMacroTokens,
@@ -17,13 +19,11 @@ import { parseLed, parseRgb, serializeLed } from "./txt/led.ts";
 const EMPTY =
   "<base>\r\n\r\n<keypad>\r\n\r\n<function1>\r\n\r\n<function2>\r\n\r\n<function3>\r\n";
 
-const edited = (
-  text: string,
-  ...edits: Parameters<typeof applyLayoutEdit>[1][]
-) => serializeLayout(edits.reduce(applyLayoutEdit, parseLayout(text)));
+const edited = (text: string, ...edits: LayoutEdit[]) =>
+  serializeLayout(edits.reduce(applyLayoutEdit, parseLayout(text)));
 
 describe("layout edits", () => {
-  test("a new remap lands after the layer's last non-blank line, with the file's EOL", () => {
+  test("given an empty layer, when adding a remap, then it lands after the header with the file's EOL", () => {
     expect(
       edited(EMPTY, {
         op: "set-remap",
@@ -52,7 +52,7 @@ describe("layout edits", () => {
     ).toBe("<base>\r\n[a]>[b]\r\n");
   });
 
-  test("an existing position is rewritten on its last line, keeping that line's EOL; other bytes stay", () => {
+  test("given a position set twice, when remapping it, then the last line is rewritten with its own EOL", () => {
     const text =
       "<base>\r\n[caps]>[esc]\n[q]>[w]\r\n[CAPS]>[tab]\n<keypad>\r\n[caps]>[x]\r\n";
 
@@ -78,7 +78,7 @@ describe("layout edits", () => {
     ).toEndWith("<keypad>\r\n[caps]>[caps][t&h050][esc]\r\n");
   });
 
-  test("remove drops every matching line of the layer; macros match on trigger + co-trigger", () => {
+  test("given matching lines, when removing, then every one in the layer goes; macros match on trigger and co-trigger", () => {
     const text =
       "<base>\r\n[caps]>[esc]\r\n{lctr}{hk3}>{a}\r\n{hk3}>{b}\r\n[caps]>[tab]\r\n<keypad>\r\n[caps]>[x]\r\n";
 
@@ -106,7 +106,7 @@ describe("layout edits", () => {
     ).toContain("{lctr}{hk3}>{s9}{-lshf}{h}{+lshf}\r\n{hk3}>{b}");
   });
 
-  test("a missing layer header is an error, never repaired; replace-file ignores the base", () => {
+  test("given a missing layer header, when editing, then it is layer-missing; replace-file ignores the base", () => {
     expect(() =>
       edited("<base>\r\n", {
         op: "set-remap",
@@ -125,7 +125,7 @@ describe("led edits", () => {
   const text =
     "[ind1]>[caps][255][255][255]\r\n[ind3]>[layd][0][0][0]\r\n[ind3]>[layk][1][1][1]\r\n[ind4]>[nmlk][9][9][9]\r\n";
 
-  test("set-led replaces the indicator's lines in place, layer writes one line per colour", () => {
+  test("given an indicator with lines, when setting it, then its lines are replaced in place", () => {
     const one = applyLedEdit(parseLed(text), {
       op: "set-led",
       indicator: "IND3",
@@ -136,7 +136,9 @@ describe("led edits", () => {
     expect(serializeLed(one)).toBe(
       "[ind1]>[caps][255][255][255]\r\n[IND3]>[prof][1][2][3]\r\n[ind4]>[nmlk][9][9][9]\r\n",
     );
+  });
 
+  test("given a new indicator, when setting layer colours, then one line per layer is appended in lay* order", () => {
     const layer = applyLedEdit(parseLed(text), {
       op: "set-led",
       indicator: "IND6",
@@ -150,66 +152,114 @@ describe("led edits", () => {
   });
 });
 
+const disk: Disk = { layout: EMPTY, led: "" };
+
+const ctx = (
+  session: Session | null,
+  record: WriteRecord | null,
+  onDisk: Disk | null,
+): SessionContext => ({
+  profile: 9,
+  session,
+  record,
+  disk: onDisk,
+});
+
 describe("session model", () => {
-  const disk = { layout: EMPTY, led: "" };
+  const remap: Parameters<typeof decideEdit>[1] = {
+    kind: "layout",
+    edit: { op: "set-remap", layer: "base", position: "caps", action: "esc" },
+  };
 
-  const ctx = (
-    session: Session | null,
-    record: WriteRecord | null,
-    onDisk: Disk | null,
-  ): SessionContext => ({ profile: 9, session, record, disk: onDisk });
-
-  test("the first edit captures the base; the state is derived from disk and record", () => {
-    const session = decideEdit(ctx(null, null, disk), {
-      kind: "layout",
-      edit: { op: "set-remap", layer: "base", position: "caps", action: "esc" },
-    });
+  test("given a disk, when making the first edit, then the session captures the base and renders", () => {
+    const session = decideEdit(ctx(null, null, disk), remap);
 
     expect(session.layout?.baseText).toBe(EMPTY);
     expect(render(session, "layout")).toContain("[caps]>[esc]");
     expect(render(session, "led")).toBeNull();
-    expect(deriveState(ctx(null, null, disk))).toBe("clean");
-    expect(deriveState(ctx(session, null, disk))).toBe("dirty");
-    expect(deriveState(ctx(session, null, null))).toBe("dirty");
-    expect(
-      deriveState(ctx(session, null, { layout: "<base>\r\n", led: "" })),
-    ).toBe("conflict");
-
-    const record: WriteRecord = {
-      profile: 9,
-      started_at: "",
-      backup_dir: "",
-      source: { dir: "", device: null },
-      files: [],
-      phase: { kind: "ejected" },
-    };
-
-    expect(deriveState(ctx(session, record, disk))).toBe("applied");
-    expect(deriveState(ctx(session, { ...record, profile: 1 }, disk))).toBe(
-      "dirty",
-    );
   });
 
-  test("a second edit needs no disk; the first one without a disk is a named error", () => {
+  const cases: {
+    name: string;
+    open: boolean;
+    record: WriteRecord | null;
+    onDisk: Disk | null;
+    state: SessionState;
+  }[] = [
+    {
+      name: "no session",
+      open: false,
+      record: null,
+      onDisk: null,
+      state: "clean",
+    },
+    {
+      name: "a matching disk",
+      open: true,
+      record: null,
+      onDisk: disk,
+      state: "dirty",
+    },
+    { name: "no disk", open: true, record: null, onDisk: null, state: "dirty" },
+    {
+      name: "a changed disk",
+      open: true,
+      record: null,
+      onDisk: { layout: "<base>\r\n", led: "" },
+      state: "conflict",
+    },
+    {
+      name: "an ejected record",
+      open: true,
+      record: recordOf(9, { kind: "ejected" }),
+      onDisk: disk,
+      state: "applied",
+    },
+    {
+      name: "a record for another profile",
+      open: true,
+      record: recordOf(1, { kind: "ejected" }),
+      onDisk: disk,
+      state: "dirty",
+    },
+  ];
+
+  test.each(cases)(
+    "given $name, when deriving the state, then it is $state",
+    ({ open, record, onDisk, state }) => {
+      const live = open ? decideEdit(ctx(null, null, disk), remap) : null;
+
+      expect(deriveState(ctx(live, record, onDisk))).toBe(state);
+    },
+  );
+
+  test("given a captured base, when editing without a disk, then the edit is accepted", () => {
     const first: Session = {
       profile: 9,
       layout: { baseText: EMPTY, edits: [] },
     };
 
+    const removal = {
+      kind: "layout" as const,
+      edit: { op: "remove" as const, layer: "base" as const, position: "caps" },
+    };
+
     expect(
-      decideEdit(ctx(first, null, null), {
-        kind: "layout",
-        edit: { op: "remove", layer: "base", position: "caps" },
-      }).layout?.edits.length,
-    ).toBe(1);
-    expect(() =>
-      decideEdit(ctx(null, null, null), {
-        kind: "led",
-        edit: { op: "replace-file", text: "" },
-      }),
-    ).toThrow("the first edit needs the on-disk led file");
-    expect(() =>
-      decideEdit(ctx(null, null, { layout: "<base>\r\n", led: null }), {
+      decideEdit(ctx(first, null, null), removal).layout?.edits,
+    ).toHaveLength(1);
+  });
+
+  test.each([
+    [
+      "no disk",
+      null,
+      { kind: "led", edit: { op: "replace-file", text: "" } },
+      "the first edit needs the on-disk led file",
+    ],
+    [
+      "a layout without the layer",
+      { layout: "<base>\r\n", led: null },
+      {
         kind: "layout",
         edit: {
           op: "set-remap",
@@ -217,7 +267,13 @@ describe("session model", () => {
           position: "a",
           action: "b",
         },
-      }),
-    ).toThrow("layer header <function3> is missing");
-  });
+      },
+      "layer header <function3> is missing",
+    ],
+  ] as const)(
+    "given %s, when making the first edit, then it fails with a named message",
+    (_, onDisk, edit, message) => {
+      expect(() => decideEdit(ctx(null, null, onDisk), edit)).toThrow(message);
+    },
+  );
 });

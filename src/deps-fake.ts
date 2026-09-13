@@ -9,6 +9,7 @@ export type Notification = {
 
 export type FakeDeps = Deps & {
   devices: BlockDevice[];
+  nextDevices: BlockDevice[][];
   unmounted: string[];
   notifications: Notification[];
   sleeps: number[];
@@ -29,6 +30,7 @@ export function fakeDeps(
     stateDir,
     sourceEnv: null,
     devices,
+    nextDevices: [],
     unmounted: [],
     notifications: [],
     sleeps: [],
@@ -37,6 +39,8 @@ export function fakeDeps(
     failUnmount: false,
     stopAfterSleeps: Number.POSITIVE_INFINITY,
     observe() {
+      fake.devices = fake.nextDevices.shift() ?? fake.devices;
+
       return Promise.resolve({
         devices: fake.devices.map((d) => ({ ...d })),
       });
