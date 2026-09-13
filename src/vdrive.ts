@@ -1,12 +1,9 @@
 import pkg from "../package.json";
-import type { Deps, Observation } from "./deps.ts";
-import { readText } from "./disk.ts";
+import type { Observation } from "./deps.ts";
 import { CliError } from "./errors.ts";
 import type { WriteRecord } from "./record.ts";
 import { parseSettings } from "./settings.ts";
-import { SETTINGS_REL } from "./source.ts";
 import type { Source } from "./source.ts";
-import { loadRecord } from "./state.ts";
 
 export const VDRIVE_LABEL = "ADV360";
 
@@ -33,28 +30,29 @@ export function observe(o: Observation): VDrive {
     : { state: "ejected", device: dev.path };
 }
 
-// ADV360_SOURCE plays --source for every verb: the GUI and the tests run against a copy.
-export async function resolveSource(
-  deps: Deps,
-  sourceFlag: string | undefined,
-): Promise<Source> {
-  const dir = sourceFlag ?? process.env["ADV360_SOURCE"];
+// --source DIR or ADV360_SOURCE: a mounted volume with no device, nothing to eject.
+export function mountedAt(dir: string): VDrive {
+  return { state: "mounted", mount: dir, device: null };
+}
 
-  if (dir !== undefined && dir !== "") {
-    return { dir, device: null };
+export function sourceOrNull(observed: VDrive): Source | null {
+  return observed.state === "mounted"
+    ? { dir: observed.mount, device: observed.device }
+    : null;
+}
+
+export function sourceOf(observed: VDrive): Source {
+  const source = sourceOrNull(observed);
+
+  if (source === null) {
+    throw new CliError(
+      "not-mounted",
+      `open the v-Drive with ${CHORD.open}, or pass --source DIR`,
+      { next: CHORD.open },
+    );
   }
 
-  const v = observe(await deps.observe());
-
-  if (v.state === "mounted") {
-    return { dir: v.mount, device: v.device };
-  }
-
-  throw new CliError(
-    "not-mounted",
-    `open the v-Drive with ${CHORD.open}, or pass --source DIR`,
-    { next: CHORD.open },
-  );
+  return source;
 }
 
 export type ComposedState =
@@ -112,22 +110,13 @@ export function nextStep(
   }
 }
 
-export async function vdriveStatus(deps: Deps): Promise<VDriveStatus> {
-  const sourceEnv = process.env["ADV360_SOURCE"];
-
-  const observed: VDrive =
-    sourceEnv !== undefined && sourceEnv !== ""
-      ? { state: "mounted", mount: sourceEnv, device: null }
-      : observe(await deps.observe());
-
-  const record = await loadRecord(deps.stateDir);
+export function statusOf(
+  observed: VDrive,
+  record: WriteRecord | null,
+  settingsText: string | null,
+  stateDir: string,
+): VDriveStatus {
   const state = composeState(observed, record);
-
-  const settingsText =
-    observed.state === "mounted"
-      ? await readText(observed.mount, SETTINGS_REL)
-      : null;
-
   const settings = parseSettings(settingsText ?? "");
 
   return {
@@ -138,7 +127,7 @@ export async function vdriveStatus(deps: Deps): Promise<VDriveStatus> {
     pending_write: record,
     next: nextStep(state, record),
     version: pkg.version,
-    stateDir: deps.stateDir,
+    stateDir,
   };
 }
 
@@ -153,30 +142,16 @@ export function watchStep(prev: VDrive | null, next: VDrive): WatchStep {
   };
 }
 
-export async function watch(
-  deps: Deps,
-  emit: (status: VDriveStatus) => void,
-  intervalMs = 1000,
-): Promise<never> {
-  let prev: VDrive | null = null;
-
-  for (;;) {
-    const status = await vdriveStatus(deps);
-    const step = watchStep(prev, status.observed);
-
-    if (step.changed) {
-      emit(status);
-    }
-
-    if (step.notify) {
-      await deps.notify(
-        "Advantage360 v-Drive connected",
-        "adv360 gui to edit the keyboard",
-        "normal",
-      );
-    }
-
-    prev = status.observed;
-    await Bun.sleep(intervalMs);
+export function ejectTarget(status: VDriveStatus): string {
+  if (status.observed.state !== "mounted" || status.observed.device === null) {
+    throw new CliError("not-mounted", "nothing to eject", {
+      next: status.next,
+    });
   }
+
+  if (status.pending_write?.phase.kind === "writing") {
+    throw new CliError("write-in-progress", "a write cycle is running");
+  }
+
+  return status.observed.device;
 }

@@ -48,7 +48,7 @@ describe("inspect on the keyboard mirror", () => {
       kind: "macro",
       trigger: "hk3",
       cotrigger: "lctr",
-      tokens: ["s5", "x1", "lshf", "F6"],
+      tokens: parseMacroTokens("{s5}{x1}{lshf}{F6}"),
       disabled: false,
     });
   });

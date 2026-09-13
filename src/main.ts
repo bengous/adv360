@@ -1,16 +1,31 @@
 import { parseArgs } from "node:util";
 
+import { applyVerb } from "./apply.ts";
+import { backup, backupDir } from "./backup.ts";
 import { realDeps } from "./deps.ts";
 import type { Deps } from "./deps.ts";
-import { readDisk } from "./disk.ts";
+import { diffVerb } from "./diff.ts";
 import { CliError, UsageError } from "./errors.ts";
 import { launchGui } from "./gui.ts";
 import { inspect } from "./inspect.ts";
-import { addEdit, assertEditable, deriveState, render } from "./session.ts";
+import type { Json } from "./json.ts";
+import { restore } from "./restore.ts";
+import {
+  discardSession,
+  editSession,
+  loadFileEdit,
+  sessionStatus,
+} from "./session-edit.ts";
 import type { Edit } from "./session.ts";
-import { KINDS, kindOfName, parseProfile, relOf } from "./source.ts";
-import type { Disk, Profile, Source } from "./source.ts";
-import { loadRecord, loadSession, saveSession } from "./state.ts";
+import { parseProfile } from "./source.ts";
+import { loadSession } from "./state.ts";
+import {
+  eject,
+  findSource,
+  findSourceOrNull,
+  vdriveStatus,
+  watch,
+} from "./status.ts";
 import {
   parseLayerName,
   parseMacroTokens,
@@ -18,18 +33,9 @@ import {
 } from "./txt/layout.ts";
 import { parseLedColors } from "./txt/led-edit.ts";
 import { parseIndicator } from "./txt/led.ts";
-import { CHORD, resolveSource, vdriveStatus, watch } from "./vdrive.ts";
+import { CHORD } from "./vdrive.ts";
+import { verify } from "./verify.ts";
 import { view } from "./view.ts";
-import {
-  backup,
-  describePlan,
-  diffFiles,
-  ejectAfterWrite,
-  executeApply,
-  planApply,
-  restoreSession,
-  verify,
-} from "./write.ts";
 
 const USAGE = `usage: adv360 <verb> [flags]
   vdrive status                       composed v-Drive state, active profile, next chord
@@ -94,63 +100,6 @@ function needLayer(flags: Flags) {
   return parseLayerName(need(flags, "layer"));
 }
 
-async function sourceOrNull(deps: Deps, flags: Flags): Promise<Source | null> {
-  try {
-    return await resolveSource(deps, flags.source);
-  } catch (error) {
-    if (error instanceof CliError && error.error === "not-mounted") {
-      return null;
-    }
-
-    throw error;
-  }
-}
-
-type SessionStatus = {
-  profile: Profile;
-  state: string;
-  source: Source | null;
-  layout: { edits: unknown[]; renders: string } | null;
-  led: { edits: unknown[]; renders: string } | null;
-};
-
-async function sessionStatus(
-  deps: Deps,
-  profile: Profile,
-  source: Source | null,
-): Promise<SessionStatus> {
-  const session = await loadSession(deps.stateDir, profile);
-  const disk = source ? await readDisk(source.dir, profile) : null;
-  const state = deriveState(session, await loadRecord(deps.stateDir), disk);
-
-  return {
-    profile,
-    state,
-    source,
-    layout: session?.layout
-      ? { edits: session.layout.edits, renders: relOf("layout", profile) }
-      : null,
-    led: session?.led
-      ? { edits: session.led.edits, renders: relOf("led", profile) }
-      : null,
-  };
-}
-
-async function editSession(
-  deps: Deps,
-  flags: Flags,
-  profile: Profile,
-  edit: Edit,
-): Promise<SessionStatus> {
-  const source = await sourceOrNull(deps, flags);
-  const disk: Disk | null = source ? await readDisk(source.dir, profile) : null;
-  const session = await loadSession(deps.stateDir, profile);
-  assertEditable(deriveState(session, await loadRecord(deps.stateDir), disk));
-  await saveSession(deps.stateDir, addEdit(session, profile, edit, disk));
-
-  return sessionStatus(deps, profile, source);
-}
-
 function sessionEdit(op: string, flags: Flags): Edit {
   switch (op) {
     case "set-remap":
@@ -175,7 +124,6 @@ function sessionEdit(op: string, flags: Flags): Edit {
           hold: need(flags, "hold"),
         },
       };
-
     case "set-macro":
       return {
         kind: "layout",
@@ -227,140 +175,62 @@ async function sessionVerb(
   deps: Deps,
   flags: Flags,
   op: string,
-): Promise<unknown> {
+): Promise<Json> {
   const profile = parseProfile(flags.profile);
 
   switch (op) {
     case "status":
-      return sessionStatus(deps, profile, await sourceOrNull(deps, flags));
+      return sessionStatus(
+        deps,
+        profile,
+        await findSourceOrNull(deps, flags.source),
+      );
     case "discard":
-      await saveSession(deps.stateDir, { profile });
-
-      return sessionStatus(deps, profile, await sourceOrNull(deps, flags));
+      return discardSession(
+        deps,
+        profile,
+        await findSourceOrNull(deps, flags.source),
+      );
     case "load-file": {
-      const from = need(flags, "from");
-      const file = Bun.file(from);
+      const edit = await loadFileEdit(need(flags, "from"), flags.kind);
 
-      if (!(await file.exists())) {
-        throw new CliError("file-missing", `${from} does not exist`);
-      }
-
-      const kind = flags.kind ?? kindOfName(from);
-
-      if (kind !== "layout" && kind !== "led") {
-        throw new UsageError("--kind must be layout or led");
-      }
-
-      return editSession(deps, flags, profile, {
-        kind,
-        edit: { op: "replace-file", text: await file.text() },
-      });
+      return editSession(
+        deps,
+        profile,
+        await findSourceOrNull(deps, flags.source),
+        edit,
+      );
     }
 
-    default:
-      return editSession(deps, flags, profile, sessionEdit(op, flags));
-  }
-}
+    default: {
+      const edit = sessionEdit(op, flags);
 
-async function diffVerb(deps: Deps, flags: Flags): Promise<unknown> {
-  const profile = parseProfile(flags.profile);
-  const source = await sourceOrNull(deps, flags);
-  const session = await loadSession(deps.stateDir, profile);
-
-  if (!session) {
-    throw new CliError("no-session", `no edit session for profile ${profile}`);
-  }
-
-  const disk = source ? await readDisk(source.dir, profile) : null;
-  const state = deriveState(session, await loadRecord(deps.stateDir), disk);
-  const files: { rel: string; diff: string }[] = [];
-
-  for (const kind of KINDS) {
-    const part = session[kind];
-    const rendered = render(session, kind);
-
-    if (!part || rendered === null) {
-      continue;
+      return editSession(
+        deps,
+        profile,
+        await findSourceOrNull(deps, flags.source),
+        edit,
+      );
     }
-
-    const rel = relOf(kind, profile);
-
-    files.push({
-      rel,
-      diff: await diffFiles(deps.stateDir, rel, part.baseText, rendered),
-    });
   }
-
-  return { profile, state, files };
 }
 
-async function applyVerb(deps: Deps, flags: Flags): Promise<unknown> {
-  const profile = parseProfile(flags.profile);
-  const source = await resolveSource(deps, flags.source);
-  const record = await loadRecord(deps.stateDir);
+type Handler = (flags: Flags, positionals: string[]) => Promise<Json>;
 
-  if (
-    record?.phase.kind === "written" &&
-    record.profile === profile &&
-    source.device !== null &&
-    source.device !== ""
-  ) {
-    console.log(
-      JSON.stringify({ event: "retry-eject", device: source.device }),
-    );
-
-    return ejectAfterWrite(deps, record);
-  }
-
-  const plan = await planApply(deps, source, profile);
-  console.log(JSON.stringify(describePlan(plan)));
-
-  if (flags["dry-run"] === true) {
-    return { event: "dry-run", profile };
-  }
-
-  return executeApply(deps, plan);
-}
-
-function handlers(
-  deps: Deps,
-): Record<string, (flags: Flags, positionals: string[]) => Promise<unknown>> {
+function handlers(deps: Deps): Record<string, Handler> {
   return {
     "vdrive status": () => vdriveStatus(deps),
-    "vdrive eject": async () => {
-      const status = await vdriveStatus(deps);
-
-      if (
-        status.observed.state !== "mounted" ||
-        status.observed.device === null
-      ) {
-        throw new CliError("not-mounted", "nothing to eject", {
-          next: status.next,
-        });
-      }
-
-      if (status.pending_write?.phase.kind === "writing") {
-        throw new CliError("write-in-progress", "a write cycle is running");
-      }
-
-      await deps.unmount(status.observed.device);
-
-      return {
-        event: "ejected",
-        device: status.observed.device,
-        next: `${CHORD.close} to close the v-Drive`,
-      };
-    },
+    "vdrive eject": () => eject(deps),
     gui: () => launchGui(),
     watch: () => watch(deps, (status) => console.log(JSON.stringify(status))),
     inspect: async (flags) =>
       inspect(
-        (await resolveSource(deps, flags.source)).dir,
+        (await findSource(deps, flags.source)).dir,
         flags.profile === undefined ? undefined : parseProfile(flags.profile),
       ),
     view: async (flags) => {
       const profile = parseProfile(flags.profile);
-      const source = await resolveSource(deps, flags.source);
+      const source = await findSource(deps, flags.source);
 
       return view(
         source.dir,
@@ -371,15 +241,24 @@ function handlers(
     },
     session: (flags, positionals) =>
       sessionVerb(deps, flags, positionals[1] ?? ""),
-    diff: (flags) => diffVerb(deps, flags),
-    apply: (flags) => applyVerb(deps, flags),
-    verify: async (flags) =>
-      verify(deps, await resolveSource(deps, flags.source)),
+    diff: async (flags) =>
+      diffVerb(
+        deps,
+        parseProfile(flags.profile),
+        await findSourceOrNull(deps, flags.source),
+      ),
+    apply: async (flags) =>
+      applyVerb(
+        deps,
+        parseProfile(flags.profile),
+        await findSource(deps, flags.source),
+        flags["dry-run"] === true,
+      ),
+    verify: async (flags) => verify(deps, await findSource(deps, flags.source)),
     backup: async (flags) =>
       backup(
-        (await resolveSource(deps, flags.source)).dir,
-        deps.stateDir,
-        deps.now(),
+        (await findSource(deps, flags.source)).dir,
+        backupDir(deps.stateDir, deps.now()),
       ),
     restore: async (flags, positionals) => {
       const from = positionals[1];
@@ -389,10 +268,8 @@ function handlers(
       }
 
       const profile = parseProfile(flags.profile);
-      const source = await resolveSource(deps, flags.source);
-      await restoreSession(deps, source, profile, from);
 
-      return sessionStatus(deps, profile, source);
+      return restore(deps, await findSource(deps, flags.source), profile, from);
     },
   };
 }

@@ -6,6 +6,7 @@ import type { Session } from "./session.ts";
 import { relOf } from "./source.ts";
 import type { Profile } from "./source.ts";
 import { effectiveLayer } from "./txt/layout-view.ts";
+import type { EffectiveLayer } from "./txt/layout-view.ts";
 import { parseLayout } from "./txt/layout.ts";
 import type { LayerName, MacroTokens, TapHoldMs } from "./txt/layout.ts";
 import { effectiveLeds } from "./txt/led-edit.ts";
@@ -77,59 +78,77 @@ export type ViewReport = {
   session: boolean;
 };
 
-function layerKeys(text: string, layer: LayerName): ViewKey[] {
-  const effective = effectiveLayer(parseLayout(text), layer);
+function macrosOf(effective: EffectiveLayer, position: string): ViewMacro[] {
+  const macros: ViewMacro[] = [];
 
-  return keyboard.keys.map(({ position }): ViewKey => {
-    const macros: ViewMacro[] = [];
-
-    for (const { line, entry } of effective.macros.values()) {
-      if (entry.trigger.toLowerCase() === position) {
-        macros.push({ cotrigger: entry.cotrigger, tokens: entry.tokens, line });
-      }
+  for (const { line, entry } of effective.macros.values()) {
+    if (entry.trigger.toLowerCase() === position) {
+      macros.push({ cotrigger: entry.cotrigger, tokens: entry.tokens, line });
     }
+  }
 
-    const hit = effective.keys.get(position);
+  return macros;
+}
 
-    if (!hit) {
-      const action = defaultAction(layer, position);
+function keyOf(
+  effective: EffectiveLayer,
+  layer: LayerName,
+  position: string,
+): ViewKey {
+  const macros = macrosOf(effective, position);
+  const hit = effective.keys.get(position);
 
-      return {
-        position,
-        kind: "default",
-        action,
-        label: action !== null && action !== "" ? labelOf(action) : "",
-        macros,
-      };
-    }
+  if (!hit) {
+    const action = defaultAction(layer, position);
+    const label = action !== null && action !== "" ? labelOf(action) : "";
 
-    const { line, entry } = hit;
+    return { position, kind: "default", action, label, macros };
+  }
 
-    if (entry.kind === "remap") {
-      return {
-        position,
-        kind: "remap",
-        action: entry.action,
-        label: labelOf(entry.action),
-        line,
-        macros,
-      };
-    }
+  const { line, entry } = hit;
+
+  if (entry.kind === "remap") {
+    const label = labelOf(entry.action);
 
     return {
       position,
-      kind: "taphold",
-      tap: entry.tap,
-      ms: entry.ms,
-      hold: entry.hold,
-      label: `${labelOf(entry.tap)} / ${labelOf(entry.hold)}`,
+      kind: "remap",
+      action: entry.action,
+      label,
       line,
       macros,
     };
-  });
+  }
+
+  const label = `${labelOf(entry.tap)} / ${labelOf(entry.hold)}`;
+  const { tap, ms, hold } = entry;
+
+  return { position, kind: "taphold", tap, ms, hold, label, line, macros };
+}
+
+export function layerKeys(text: string, layer: LayerName): ViewKey[] {
+  const effective = effectiveLayer(parseLayout(text), layer);
+
+  return keyboard.keys.map(({ position }) => keyOf(effective, layer, position));
 }
 
 // With a session, keys show the pending render; `pending` marks the ones that differ from the disk.
+export function overlay(
+  onDisk: ViewKey[],
+  shown: ViewKey[],
+): ViewReport["keys"] {
+  const keys: ViewReport["keys"] = [];
+
+  for (const [i, key] of shown.entries()) {
+    keys.push({
+      ...key,
+      pending: JSON.stringify(key) !== JSON.stringify(onDisk[i]),
+    });
+  }
+
+  return keys;
+}
+
 export async function view(
   source: string,
   profile: Profile,
@@ -141,12 +160,6 @@ export async function view(
   const onDisk = layerKeys(layoutText ?? "", layer);
   const rendered = session ? render(session, "layout") : null;
   const shown = rendered === null ? onDisk : layerKeys(rendered, layer);
-
-  const keys = shown.map((key, i) => ({
-    ...key,
-    pending: JSON.stringify(key) !== JSON.stringify(onDisk[i]),
-  }));
-
   const ledShown = session ? render(session, "led") : null;
   const leds = ledShown ?? ledText;
 
@@ -154,7 +167,7 @@ export async function view(
     profile,
     layer,
     layout: layoutText === null ? null : relOf("layout", profile),
-    keys,
+    keys: overlay(onDisk, shown),
     leds: leds === null ? null : effectiveLeds(parseLed(leds)),
     session: session !== null,
   };

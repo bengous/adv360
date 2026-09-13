@@ -3,11 +3,13 @@ import { cp, mkdtemp, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { executePlan } from "./apply.ts";
 import { fakeDeps } from "./deps.ts";
 import type { FakeDeps } from "./deps.ts";
-import { sha256 } from "./disk.ts";
+import { readDisk, sha256 } from "./disk.ts";
 import { run } from "./main.ts";
-import { loadRecord, saveRecord } from "./state.ts";
+import { decideApply } from "./plan.ts";
+import { loadContext, loadRecord, saveRecord } from "./state.ts";
 
 const FIXTURES = join(import.meta.dir, "../tests/fixtures/real");
 
@@ -79,8 +81,7 @@ describe("apply cycle on a fake v-Drive", () => {
     expect(applied.code).toBe(0);
     expect(applied.last).toMatchObject({
       event: "applied",
-      ejected: true,
-      verified: false,
+      outcome: { kind: "ejected" },
       files: ["layouts/layout9.txt"],
     });
     expect(await text("layouts/layout9.txt")).toBe(
@@ -208,7 +209,10 @@ describe("apply cycle on a fake v-Drive", () => {
     expect((await adv("vdrive", "status")).last["state"]).toBe("busy-writing");
     deps.failUnmount = false;
     const retried = await adv("apply", "--profile", "9");
-    expect(retried.last).toMatchObject({ event: "applied", ejected: true });
+    expect(retried.last).toMatchObject({
+      event: "applied",
+      outcome: { kind: "ejected" },
+    });
     expect(JSON.parse(out.at(-2)!)["event"]).toBe("retry-eject");
   });
 
@@ -232,8 +236,7 @@ describe("apply cycle on a fake v-Drive", () => {
     const applied = await adv("apply", "--profile", "9", "--source", dir);
     expect(applied.last).toMatchObject({
       event: "applied",
-      ejected: false,
-      verified: true,
+      outcome: { kind: "verified-by-readback" },
     });
     expect(deps.unmounted).toEqual([]);
     expect(await loadRecord(deps.stateDir)).toBeNull();
@@ -395,8 +398,13 @@ describe("apply cycle on a fake v-Drive", () => {
       "--action",
       "b",
     );
-    const { planApply, executeApply } = await import("./write.ts");
-    const plan = await planApply(deps, { dir: mount, device: "/dev/fake" }, 9);
+    const ctx = await loadContext(deps.stateDir, 9, await readDisk(mount, 9));
+    const decision = decideApply(ctx, { dir: mount, device: "/dev/fake" }, "");
+
+    if (decision.kind !== "plan") {
+      throw new Error("expected a plan");
+    }
+
     await saveRecord(deps.stateDir, {
       profile: 1,
       started_at: "",
@@ -405,7 +413,7 @@ describe("apply cycle on a fake v-Drive", () => {
       files: [],
       phase: { kind: "written" },
     });
-    await expect(executeApply(deps, plan)).rejects.toThrow(
+    await expect(executePlan(deps, decision.plan, ctx.record)).rejects.toThrow(
       "another write cycle",
     );
   });

@@ -10,7 +10,7 @@ Every verb is `adv360 <verb> [flags]`, prints one JSON value per line on stdout 
 | `view --profile N --layer L` | GUI, agent | same | none; effective action per key (later wins, disabled skipped), macros attached to their trigger with `cotrigger`, pending session overlay |
 | `session set-remap / set-taphold / set-macro / remove / set-led / load-file / discard / status --profile N` | GUI click, agent | session file; the first edit captures the on-disk base | `clean → dirty`, `dirty → clean` (discard); a `conflict` session accepts only `discard`; writes only under `~/.local/state/adv360/sessions/` |
 | `diff --profile N` | any | session + on-disk | none; unified `.txt` diff, CRLF preserved |
-| `apply --profile N [--dry-run]` | human confirm; agent after the human confirmed | session, v-Drive, write record | full write cycle; `--dry-run` prints the plan only; notifies "written, press SmartSet + Hotkey 4" |
+| `apply --profile N [--dry-run]` | human confirm; agent after the human confirmed | session, v-Drive, write record | full write cycle; `--dry-run` prints the plan only; notifies "written, press SmartSet + Hotkey 4"; reports `outcome: {kind: "ejected", next}` or `{kind: "verified-by-readback"}` under `--source` |
 | `verify` | GUI on re-mount, agent | write record + on-disk | `ejected → verified` (record and session cleared) / `unchanged` (record cleared, session kept) / `mismatch` (record `failed`, `corrupt-suspected`) |
 | `backup` | any, and inside `apply` | `layouts/ lighting/ settings/` | copy to `~/.local/state/adv360/backups/<ts>/`; listing is `ls` |
 | `restore <dir-or-file> --profile N` | any | a backup dir or one `.txt` | opens a `replace-file` session; the write goes through `apply` |
@@ -46,7 +46,7 @@ Source resolution: `--source DIR`, else the mounted v-Drive, else error `not-mou
 9. record `ejected`, notify.
 10. the human presses `SmartSet + Hotkey 4`, reopens the v-Drive (`Hotkey 3` twice) → `verify`.
 
-Under `--source` steps 8-10 are skipped. Layout and LED of one profile are written in one cycle, one eject.
+Under `--source` steps 8-10 are skipped and the report carries `outcome.kind = "verified-by-readback"`; after an eject it carries `outcome = {kind: "ejected", next}`. Layout and LED of one profile are written in one cycle, one eject.
 
 `apply` rejects `not-mounted`, `no-session`, `no-change`, `session-conflict`, `write-pending`, `write-in-progress`; `failed` does not block a new apply (restore must stay possible). A `written` record for the same profile makes `apply` retry only the eject (`{"event":"retry-eject"}`).
 

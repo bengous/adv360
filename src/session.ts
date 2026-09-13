@@ -1,7 +1,7 @@
 import { CliError } from "./errors.ts";
 import type { WriteRecord } from "./record.ts";
-import { KINDS } from "./source.ts";
-import type { Disk, FileKind, Profile } from "./source.ts";
+import { KINDS, relOf } from "./source.ts";
+import type { Disk, FileKind, Profile, Source } from "./source.ts";
 import { applyLayoutEdit } from "./txt/layout-edit.ts";
 import type { LayoutEdit } from "./txt/layout-edit.ts";
 import { parseLayout, serializeLayout } from "./txt/layout.ts";
@@ -17,12 +17,18 @@ export type Session = {
 
 export type SessionState = "clean" | "dirty" | "conflict" | "applied";
 
+// Everything a session decision reads, gathered once by the use case.
+export type SessionContext = {
+  profile: Profile;
+  session: Session | null;
+  record: WriteRecord | null;
+  disk: Disk | null;
+};
+
 // Derived, never stored. An unreadable disk (no v-Drive) keeps the session dirty, not conflict.
-export function deriveState(
-  session: Session | null,
-  record: WriteRecord | null,
-  disk: Disk | null,
-): SessionState {
+export function deriveState(ctx: SessionContext): SessionState {
+  const { session, record, disk } = ctx;
+
   if (
     record &&
     record.profile === session?.profile &&
@@ -99,12 +105,8 @@ function base(
 }
 
 // The first edit of a file captures its on-disk base; later edits need no disk.
-export function addEdit(
-  session: Session | null,
-  profile: Profile,
-  edit: Edit,
-  disk: Disk | null,
-): Session {
+function addEdit(ctx: SessionContext, edit: Edit): Session {
+  const { session, profile, disk } = ctx;
   const next: Session = session ? structuredClone(session) : { profile };
 
   switch (edit.kind) {
@@ -143,4 +145,37 @@ export function assertEditable(state: SessionState): void {
       "a write awaits verification; run adv360 verify first",
     );
   }
+}
+
+export function decideEdit(ctx: SessionContext, edit: Edit): Session {
+  assertEditable(deriveState(ctx));
+
+  return addEdit(ctx, edit);
+}
+
+export type SessionStatus = {
+  profile: Profile;
+  state: SessionState;
+  source: Source | null;
+  layout: { edits: LayoutEdit[]; renders: string } | null;
+  led: { edits: LedEdit[]; renders: string } | null;
+};
+
+export function sessionStatusOf(
+  ctx: SessionContext,
+  source: Source | null,
+): SessionStatus {
+  const { profile, session } = ctx;
+
+  return {
+    profile,
+    state: deriveState(ctx),
+    source,
+    layout: session?.layout
+      ? { edits: session.layout.edits, renders: relOf("layout", profile) }
+      : null,
+    led: session?.led
+      ? { edits: session.led.edits, renders: relOf("led", profile) }
+      : null,
+  };
 }

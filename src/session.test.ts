@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import { addEdit, deriveState, render } from "./session.ts";
-import type { Session } from "./session.ts";
+import type { WriteRecord } from "./record.ts";
+import { decideEdit, deriveState, render } from "./session.ts";
+import type { Session, SessionContext } from "./session.ts";
+import type { Disk } from "./source.ts";
 import { applyLayoutEdit, LayerMissing } from "./txt/layout-edit.ts";
 import {
   parseLayout,
@@ -150,39 +152,42 @@ describe("led edits", () => {
 
 describe("session model", () => {
   const disk = { layout: EMPTY, led: "" };
+
+  const ctx = (
+    session: Session | null,
+    record: WriteRecord | null,
+    onDisk: Disk | null,
+  ): SessionContext => ({ profile: 9, session, record, disk: onDisk });
+
   test("the first edit captures the base; the state is derived from disk and record", () => {
-    const session = addEdit(
-      null,
-      9,
-      {
-        kind: "layout",
-        edit: {
-          op: "set-remap",
-          layer: "base",
-          position: "caps",
-          action: "esc",
-        },
-      },
-      disk,
-    );
+    const session = decideEdit(ctx(null, null, disk), {
+      kind: "layout",
+      edit: { op: "set-remap", layer: "base", position: "caps", action: "esc" },
+    });
 
     expect(session.layout?.baseText).toBe(EMPTY);
     expect(render(session, "layout")).toContain("[caps]>[esc]");
     expect(render(session, "led")).toBeNull();
-    expect(deriveState(null, null, disk)).toBe("clean");
-    expect(deriveState(session, null, disk)).toBe("dirty");
-    expect(deriveState(session, null, null)).toBe("dirty");
-    expect(deriveState(session, null, { layout: "<base>\r\n", led: "" })).toBe(
-      "conflict",
+    expect(deriveState(ctx(null, null, disk))).toBe("clean");
+    expect(deriveState(ctx(session, null, disk))).toBe("dirty");
+    expect(deriveState(ctx(session, null, null))).toBe("dirty");
+    expect(
+      deriveState(ctx(session, null, { layout: "<base>\r\n", led: "" })),
+    ).toBe("conflict");
+
+    const record: WriteRecord = {
+      profile: 9,
+      started_at: "",
+      backup_dir: "",
+      source: { dir: "", device: null },
+      files: [],
+      phase: { kind: "ejected" },
+    };
+
+    expect(deriveState(ctx(session, record, disk))).toBe("applied");
+    expect(deriveState(ctx(session, { ...record, profile: 1 }, disk))).toBe(
+      "dirty",
     );
-
-    const record = {
-      profile: 9 as const,
-      phase: { kind: "ejected" as const },
-    } as Parameters<typeof deriveState>[1] & object;
-
-    expect(deriveState(session, record, disk)).toBe("applied");
-    expect(deriveState(session, { ...record, profile: 1 }, disk)).toBe("dirty");
   });
 
   test("a second edit needs no disk; the first one without a disk is a named error", () => {
@@ -192,39 +197,27 @@ describe("session model", () => {
     };
 
     expect(
-      addEdit(
-        first,
-        9,
-        {
-          kind: "layout",
-          edit: { op: "remove", layer: "base", position: "caps" },
-        },
-        null,
-      ).layout?.edits.length,
+      decideEdit(ctx(first, null, null), {
+        kind: "layout",
+        edit: { op: "remove", layer: "base", position: "caps" },
+      }).layout?.edits.length,
     ).toBe(1);
     expect(() =>
-      addEdit(
-        null,
-        9,
-        { kind: "led", edit: { op: "replace-file", text: "" } },
-        null,
-      ),
+      decideEdit(ctx(null, null, null), {
+        kind: "led",
+        edit: { op: "replace-file", text: "" },
+      }),
     ).toThrow("the first edit needs the on-disk led file");
     expect(() =>
-      addEdit(
-        null,
-        9,
-        {
-          kind: "layout",
-          edit: {
-            op: "set-remap",
-            layer: "function3",
-            position: "a",
-            action: "b",
-          },
+      decideEdit(ctx(null, null, { layout: "<base>\r\n", led: null }), {
+        kind: "layout",
+        edit: {
+          op: "set-remap",
+          layer: "function3",
+          position: "a",
+          action: "b",
         },
-        { layout: "<base>\r\n", led: null },
-      ),
+      }),
     ).toThrow("layer header <function3> is missing");
   });
 });

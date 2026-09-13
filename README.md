@@ -48,7 +48,7 @@ The keyboard opens, reloads and closes its own volume; only the human can press 
 | `adv360 view --profile N --layer base\|kp\|fn1\|fn2\|fn3` | the effective action per key, macros on their trigger, pending edits marked |
 | `adv360 session set-remap\|set-taphold\|set-macro\|remove\|set-led\|load-file\|discard\|status --profile N …` | edit session, see `adv360` with no verb for the flags |
 | `adv360 diff --profile N` | unified diff of the session against the disk |
-| `adv360 apply --profile N [--dry-run]` | the write cycle; the plan line names every side effect first |
+| `adv360 apply --profile N [--dry-run]` | the write cycle; the plan line names every side effect first; the report ends with `outcome` (`ejected` with the next chord, or `verified-by-readback` under `--source`) |
 | `adv360 verify` | after the reload and reopen: `verified`, `unchanged` or `mismatch` |
 | `adv360 backup` | copy the three folders to the state dir |
 | `adv360 restore <backup-dir-or-file> --profile N` | open a session that replaces the profile's files; apply writes it |

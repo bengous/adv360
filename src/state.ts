@@ -7,8 +7,8 @@ import { CliError } from "./errors.ts";
 import { markDied, parseRecord } from "./record.ts";
 import type { WriteRecord } from "./record.ts";
 import { parseSession } from "./session-json.ts";
-import type { Session } from "./session.ts";
-import type { Profile } from "./source.ts";
+import type { Session, SessionContext } from "./session.ts";
+import type { Disk, Profile } from "./source.ts";
 
 const RECORD = "write.json";
 
@@ -105,4 +105,17 @@ export async function saveSession(
 
   await mkdir(join(stateDir, "sessions"), { recursive: true });
   await Bun.write(path, pretty(session));
+}
+
+export async function loadContext<D extends Disk | null>(
+  stateDir: string,
+  profile: Profile,
+  disk: D,
+): Promise<SessionContext & { disk: D }> {
+  return {
+    profile,
+    session: await loadSession(stateDir, profile),
+    record: await loadRecord(stateDir),
+    disk,
+  };
 }
