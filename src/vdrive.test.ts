@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import type { WriteRecord } from "./record.ts";
 import { composeState, nextStep, observe, watchStep } from "./vdrive.ts";
-import type { WriteRecord } from "./write.ts";
 
 const record = (kind: WriteRecord["phase"]["kind"]): WriteRecord =>
   ({

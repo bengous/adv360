@@ -1,133 +1,30 @@
-import { mkdir, open, readdir, rename, rm } from "node:fs/promises";
+import { mkdir, rename, rm } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
 import type { Deps } from "./deps.ts";
-import { CliError } from "./errors.ts";
 import {
-  addEdit,
-  assertEditable,
-  deriveState,
-  loadSession,
-  render,
-  saveSession,
-} from "./session.ts";
+  listDir,
+  readDisk,
+  readText,
+  sha256,
+  syncDir,
+  writeSynced,
+} from "./disk.ts";
+import { CliError } from "./errors.ts";
+import type { WriteRecord } from "./record.ts";
+import { addEdit, assertEditable, deriveState, render } from "./session.ts";
 import type { Session } from "./session.ts";
-import { KINDS, kindOfName, readDisk, readText, relOf } from "./source.ts";
+import { KINDS, kindOfName, relOf } from "./source.ts";
 import type { Profile, Source } from "./source.ts";
+import {
+  clearRecord,
+  createRecord,
+  loadRecord,
+  loadSession,
+  saveRecord,
+  saveSession,
+} from "./state.ts";
 import { CHORD } from "./vdrive.ts";
-
-export type WritePhase =
-  | { kind: "writing" }
-  | { kind: "written" }
-  | { kind: "ejected" }
-  | {
-      kind: "failed";
-      step: "rename" | "readback" | "verify" | "died";
-      error: string;
-    };
-
-export type WrittenFile = { rel: string; before: string | null; after: string };
-
-export type WriteRecord = {
-  profile: Profile;
-  started_at: string;
-  backup_dir: string;
-  source: Source;
-  files: WrittenFile[];
-  phase: WritePhase;
-};
-
-export function sha256(text: string): string {
-  return new Bun.CryptoHasher("sha256").update(text).digest("hex");
-}
-
-export function recordPath(stateDir: string): string {
-  return join(stateDir, "write.json");
-}
-
-// A writing record seen by a later invocation means the writer died: the cycle lasts milliseconds.
-export async function loadRecord(
-  stateDir: string,
-): Promise<WriteRecord | null> {
-  const file = Bun.file(recordPath(stateDir));
-
-  if (!(await file.exists())) {
-    return null;
-  }
-
-  const record = (await file.json()) as WriteRecord;
-
-  if (record.phase.kind !== "writing") {
-    return record;
-  }
-
-  const died: WriteRecord = {
-    ...record,
-    phase: { kind: "failed", step: "died", error: "writer did not finish" },
-  };
-
-  await saveRecord(stateDir, died);
-
-  return died;
-}
-
-export async function saveRecord(
-  stateDir: string,
-  record: WriteRecord,
-): Promise<void> {
-  await Bun.write(recordPath(stateDir), `${JSON.stringify(record, null, 2)}\n`);
-}
-
-// The record file is the lock: wx fails when a cycle is already recorded.
-async function createRecord(
-  stateDir: string,
-  record: WriteRecord,
-): Promise<void> {
-  await mkdir(stateDir, { recursive: true });
-  let fh;
-
-  try {
-    fh = await open(recordPath(stateDir), "wx");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      throw new CliError(
-        "write-in-progress",
-        "another write cycle is recorded; run adv360 vdrive status",
-      );
-    }
-
-    throw error;
-  }
-
-  await fh.writeFile(`${JSON.stringify(record, null, 2)}\n`);
-  await fh.sync();
-  await fh.close();
-}
-
-export async function clearRecord(stateDir: string): Promise<void> {
-  await rm(recordPath(stateDir), { force: true });
-}
-
-async function writeSynced(path: string, content: string): Promise<void> {
-  const fh = await open(path, "w");
-
-  try {
-    await fh.writeFile(content);
-    await fh.sync();
-  } finally {
-    await fh.close();
-  }
-}
-
-async function syncDir(path: string): Promise<void> {
-  const fh = await open(path, "r");
-
-  try {
-    await fh.sync();
-  } finally {
-    await fh.close();
-  }
-}
 
 export const BACKUP_SUBDIRS = ["layouts", "lighting", "settings"] as const;
 
@@ -144,7 +41,7 @@ export async function backup(
   const files: string[] = [];
 
   for (const sub of BACKUP_SUBDIRS) {
-    const names = await readdir(join(sourceDir, sub)).catch((): string[] => []);
+    const names = await listDir(join(sourceDir, sub));
 
     if (names.length === 0) {
       continue;
@@ -152,7 +49,7 @@ export async function backup(
 
     await mkdir(join(dir, sub), { recursive: true });
 
-    for (const name of names.toSorted()) {
+    for (const name of names) {
       const file = Bun.file(join(sourceDir, sub, name));
 
       if (file.size === 0 && !(await file.exists())) {

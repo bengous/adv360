@@ -1,8 +1,9 @@
 import keyboard from "../data/keyboard.json";
 import tokens from "../data/tokens.json";
+import { readText } from "./disk.ts";
 import { render } from "./session.ts";
 import type { Session } from "./session.ts";
-import { readText, relOf } from "./source.ts";
+import { relOf } from "./source.ts";
 import type { Profile } from "./source.ts";
 import { effectiveLayer } from "./txt/layout-view.ts";
 import { parseLayout } from "./txt/layout.ts";

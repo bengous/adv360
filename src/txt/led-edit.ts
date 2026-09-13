@@ -4,21 +4,18 @@ import type { Indicator, LedFile, LedLine, Rgb } from "./led.ts";
 
 export const LAYER_FUNCS = ["layd", "layk", "lay1", "lay2", "lay3"] as const;
 
+export type LedColors = Record<string, Rgb>;
+
 export type LedEdit =
-  | {
-      op: "set-led";
-      indicator: Indicator;
-      function: string;
-      colors: Record<string, Rgb>;
-    }
+  | { op: "set-led"; indicator: Indicator; function: string; colors: LedColors }
   | { op: "replace-file"; text: string };
 
 // `--rgb R,G,B` colours the function itself; `--rgb layd=R,G,B` one layer of `--func layer`.
 export function parseLedColors(
   specs: readonly string[],
   func: string,
-): Record<string, Rgb> {
-  const colors: Record<string, Rgb> = {};
+): LedColors {
+  const colors: LedColors = {};
 
   for (const spec of specs) {
     const eq = spec.indexOf("=");
@@ -95,7 +92,7 @@ export function applyLedEdit(file: LedFile, edit: LedEdit): LedFile {
 // One colour per function, except "layer": one line per layer, so its colours are keyed by lay* token.
 export type EffectiveIndicator = {
   function: string;
-  colors: Record<string, Rgb>;
+  colors: LedColors;
   lines: number[];
 };
 
@@ -123,7 +120,7 @@ export function effectiveLeds(
     const func = entry.func.toLowerCase();
     const ind = out[entry.indicator];
 
-    if ((LAYER_FUNCS as readonly string[]).includes(func)) {
+    if (LAYER_FUNCS.some((f) => f === func)) {
       if (ind.function !== "layer") {
         Object.assign(ind, { function: "layer", colors: {}, lines: [] });
       }

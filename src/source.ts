@@ -1,7 +1,9 @@
-import { readdir } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 
+import { field } from "./decode.ts";
 import { CliError } from "./errors.ts";
+import { isString, orNull } from "./json.ts";
+import type { JsonObject } from "./json.ts";
 
 export const PROFILES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
@@ -43,38 +45,11 @@ export const SETTINGS_REL = "settings/settings.txt";
 // --source DIR stands for a mounted volume with no device: nothing to eject, by type.
 export type Source = { dir: string; device: string | null };
 
-export type Disk = Record<FileKind, string | null>;
-
-export async function readText(
-  dir: string,
-  rel: string,
-): Promise<string | null> {
-  const file = Bun.file(join(dir, rel));
-
-  return (await file.exists()) ? file.text() : null;
-}
-
-export async function readDisk(dir: string, profile: Profile): Promise<Disk> {
+export function parseSource(object: JsonObject, what: string): Source {
   return {
-    layout: await readText(dir, relOf("layout", profile)),
-    led: await readText(dir, relOf("led", profile)),
+    dir: field(object, "dir", isString, what),
+    device: field(object, "device", orNull(isString), what),
   };
 }
 
-const PROFILE_FILE = /^(layout|led)[1-9]\.txt$/;
-
-export async function listNamedBackups(dir: string): Promise<string[]> {
-  const out: string[] = [];
-
-  for (const sub of ["layouts", "lighting"]) {
-    const names = await readdir(join(dir, sub)).catch((): string[] => []);
-
-    for (const name of names.toSorted()) {
-      if (!PROFILE_FILE.test(name)) {
-        out.push(`${sub}/${name}`);
-      }
-    }
-  }
-
-  return out;
-}
+export type Disk = Record<FileKind, string | null>;

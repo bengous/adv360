@@ -1,7 +1,5 @@
-import { mkdir, rm } from "node:fs/promises";
-import { join } from "node:path";
-
 import { CliError } from "./errors.ts";
+import type { WriteRecord } from "./record.ts";
 import { KINDS } from "./source.ts";
 import type { Disk, FileKind, Profile } from "./source.ts";
 import { applyLayoutEdit } from "./txt/layout-edit.ts";
@@ -10,7 +8,6 @@ import { parseLayout, serializeLayout } from "./txt/layout.ts";
 import { applyLedEdit } from "./txt/led-edit.ts";
 import type { LedEdit } from "./txt/led-edit.ts";
 import { parseLed, serializeLed } from "./txt/led.ts";
-import type { WriteRecord } from "./write.ts";
 
 export type Session = {
   profile: Profile;
@@ -19,36 +16,6 @@ export type Session = {
 };
 
 export type SessionState = "clean" | "dirty" | "conflict" | "applied";
-
-export function sessionPath(stateDir: string, profile: Profile): string {
-  return join(stateDir, "sessions", `profile-${profile}.json`);
-}
-
-export async function loadSession(
-  stateDir: string,
-  profile: Profile,
-): Promise<Session | null> {
-  const file = Bun.file(sessionPath(stateDir, profile));
-
-  return (await file.exists()) ? ((await file.json()) as Session) : null;
-}
-
-// The file exists iff at least one edit; an empty session is a removed file.
-export async function saveSession(
-  stateDir: string,
-  session: Session,
-): Promise<void> {
-  const path = sessionPath(stateDir, session.profile);
-
-  if (!session.layout && !session.led) {
-    await rm(path, { force: true });
-
-    return;
-  }
-
-  await mkdir(join(stateDir, "sessions"), { recursive: true });
-  await Bun.write(path, `${JSON.stringify(session, null, 2)}\n`);
-}
 
 // Derived, never stored. An unreadable disk (no v-Drive) keeps the session dirty, not conflict.
 export function deriveState(

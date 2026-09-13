@@ -2,20 +2,15 @@ import { parseArgs } from "node:util";
 
 import { realDeps } from "./deps.ts";
 import type { Deps } from "./deps.ts";
+import { readDisk } from "./disk.ts";
 import { CliError, UsageError } from "./errors.ts";
 import { launchGui } from "./gui.ts";
 import { inspect } from "./inspect.ts";
-import {
-  addEdit,
-  assertEditable,
-  deriveState,
-  loadSession,
-  render,
-  saveSession,
-} from "./session.ts";
+import { addEdit, assertEditable, deriveState, render } from "./session.ts";
 import type { Edit } from "./session.ts";
-import { KINDS, kindOfName, parseProfile, readDisk, relOf } from "./source.ts";
+import { KINDS, kindOfName, parseProfile, relOf } from "./source.ts";
 import type { Disk, Profile, Source } from "./source.ts";
+import { loadRecord, loadSession, saveSession } from "./state.ts";
 import {
   parseLayerName,
   parseMacroTokens,
@@ -31,7 +26,6 @@ import {
   diffFiles,
   ejectAfterWrite,
   executeApply,
-  loadRecord,
   planApply,
   restoreSession,
   verify,

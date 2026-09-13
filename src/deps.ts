@@ -1,7 +1,10 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+import { decodeObject, field } from "./decode.ts";
 import { CliError } from "./errors.ts";
+import { isArray, isObject, isString, orNull } from "./json.ts";
+import type { Json } from "./json.ts";
 
 export type BlockDevice = {
   path: string;
@@ -54,6 +57,18 @@ async function runCommand(
   return { code: await proc.exited, stdout, stderr };
 }
 
+function parseBlockDevice(value: Json): BlockDevice {
+  if (!isObject(value)) {
+    throw new CliError("lsblk-failed", "blockdevices holds a non-object");
+  }
+
+  return {
+    path: field(value, "path", isString, "lsblk"),
+    label: field(value, "label", orNull(isString), "lsblk"),
+    mountpoint: field(value, "mountpoint", orNull(isString), "lsblk"),
+  };
+}
+
 export function defaultStateDir(): string {
   return join(
     process.env["XDG_STATE_HOME"] ?? join(homedir(), ".local", "state"),
@@ -74,9 +89,14 @@ export function realDeps(): Deps {
         throw new CliError("lsblk-failed", r.stderr.trim());
       }
 
-      const parsed = JSON.parse(r.stdout) as { blockdevices: BlockDevice[] };
+      const devices = field(
+        decodeObject(r.stdout, "lsblk"),
+        "blockdevices",
+        isArray,
+        "lsblk",
+      );
 
-      return { devices: parsed.blockdevices };
+      return { devices: devices.map(parseBlockDevice) };
     },
     async unmount(device) {
       const r = await runCommand(

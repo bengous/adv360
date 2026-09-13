@@ -1,11 +1,12 @@
 import pkg from "../package.json";
 import type { Deps, Observation } from "./deps.ts";
+import { readText } from "./disk.ts";
 import { CliError } from "./errors.ts";
+import type { WriteRecord } from "./record.ts";
 import { parseSettings } from "./settings.ts";
-import { readText, SETTINGS_REL } from "./source.ts";
+import { SETTINGS_REL } from "./source.ts";
 import type { Source } from "./source.ts";
-import { loadRecord } from "./write.ts";
-import type { WriteRecord } from "./write.ts";
+import { loadRecord } from "./state.ts";
 
 export const VDRIVE_LABEL = "ADV360";
 

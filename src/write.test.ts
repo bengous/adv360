@@ -5,8 +5,9 @@ import { join } from "node:path";
 
 import { fakeDeps } from "./deps.ts";
 import type { FakeDeps } from "./deps.ts";
+import { sha256 } from "./disk.ts";
 import { run } from "./main.ts";
-import { loadRecord, recordPath, saveRecord, sha256 } from "./write.ts";
+import { loadRecord, saveRecord } from "./state.ts";
 
 const FIXTURES = join(import.meta.dir, "../tests/fixtures/real");
 
@@ -396,10 +397,14 @@ describe("apply cycle on a fake v-Drive", () => {
     );
     const { planApply, executeApply } = await import("./write.ts");
     const plan = await planApply(deps, { dir: mount, device: "/dev/fake" }, 9);
-    await Bun.write(
-      recordPath(deps.stateDir),
-      JSON.stringify({ profile: 1, phase: { kind: "written" } }),
-    );
+    await saveRecord(deps.stateDir, {
+      profile: 1,
+      started_at: "",
+      backup_dir: "",
+      source: { dir: mount, device: null },
+      files: [],
+      phase: { kind: "written" },
+    });
     await expect(executeApply(deps, plan)).rejects.toThrow(
       "another write cycle",
     );

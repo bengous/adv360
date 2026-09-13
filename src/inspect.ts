@@ -1,11 +1,6 @@
+import { listNamedBackups, readText } from "./disk.ts";
 import { parseSettings } from "./settings.ts";
-import {
-  listNamedBackups,
-  PROFILES,
-  readText,
-  relOf,
-  SETTINGS_REL,
-} from "./source.ts";
+import { PROFILES, relOf, SETTINGS_REL } from "./source.ts";
 import type { Profile } from "./source.ts";
 import { parseLayout } from "./txt/layout.ts";
 import type { Entry, LayerName } from "./txt/layout.ts";
