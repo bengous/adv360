@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc --noEmit && bun test && qmllint -I /usr/lib/qt6/qml -I \"${OMARCHY_PATH:-/usr/share/omarchy}/shell\" gui/*.qml gui/components/*.qml omarchy/*.qml && shellcheck install.sh && [ \"$(jq -r .version manifest.json)\" = \"$(jq -r .version package.json)\" ] && bun run validate-plugin",
+    "check": "oxfmt --check && tsc --noEmit && bun test && qmllint -I /usr/lib/qt6/qml -I \"${OMARCHY_PATH:-/usr/share/omarchy}/shell\" gui/*.qml gui/components/*.qml omarchy/*.qml && shellcheck install.sh && [ \"$(jq -r .version manifest.json)\" = \"$(jq -r .version package.json)\" ] && bun run validate-plugin",
     "validate-plugin": "d=$(mktemp -d) && git clone -q . \"$d/plugin\" && omarchy-plugin-validate \"$d/plugin\"; s=$?; rm -rf \"$d\"; exit $s",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
