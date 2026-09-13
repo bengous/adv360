@@ -1,4 +1,4 @@
-import type { Json } from "./json.ts";
+import type { Json } from "./io/json.ts";
 
 export class CliError extends Error {
   constructor(

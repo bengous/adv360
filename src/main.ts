@@ -1,9 +1,5 @@
-import { realDeps } from "./deps.ts";
-import type { Deps } from "./deps.ts";
-import { CliError, UsageError } from "./errors.ts";
-import { parseFlags, USAGE } from "./flags.ts";
-import { launchGui } from "./gui.ts";
-import { eject, vdriveStatus, watch } from "./status.ts";
+import { eject, vdriveStatus, watch } from "./app/status.ts";
+import { parseFlags, USAGE } from "./cli/flags.ts";
 import {
   applyVerb,
   backupVerb,
@@ -13,8 +9,12 @@ import {
   sessionVerb,
   verifyVerb,
   viewVerb,
-} from "./verbs.ts";
-import type { Verb } from "./verbs.ts";
+} from "./cli/verbs.ts";
+import type { Verb } from "./cli/verbs.ts";
+import { CliError, UsageError } from "./errors.ts";
+import { realDeps } from "./io/deps.ts";
+import type { Deps } from "./io/deps.ts";
+import { launchGui } from "./io/gui.ts";
 
 const VERBS = new Map<string, Verb>([
   ["vdrive status", (deps) => vdriveStatus(deps)],

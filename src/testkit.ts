@@ -2,14 +2,14 @@ import { cp, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { decodeObject, field } from "./decode.ts";
-import { fakeDeps } from "./deps-fake.ts";
-import type { FakeDeps } from "./deps-fake.ts";
-import { isString } from "./json.ts";
-import type { JsonObject } from "./json.ts";
+import { decodeObject, field } from "./io/decode.ts";
+import { fakeDeps } from "./io/deps-fake.ts";
+import type { FakeDeps } from "./io/deps-fake.ts";
+import { isString } from "./io/json.ts";
+import type { JsonObject } from "./io/json.ts";
 import { run } from "./main.ts";
-import type { WriteRecord } from "./record.ts";
-import type { Profile } from "./source.ts";
+import type { WriteRecord } from "./model/record.ts";
+import type { Profile } from "./model/source.ts";
 
 export const FIXTURES = join(import.meta.dir, "../tests/fixtures/real");
 

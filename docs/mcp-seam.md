@@ -1,6 +1,6 @@
 # Seam: an MCP server
 
-An MCP server for agents either imports the handlers (`src/inspect.ts`, `src/view.ts`, `src/session.ts`, `src/write.ts`, `src/vdrive.ts`, with `realDeps()` from `src/deps.ts`) or spawns `adv360 <verb>` and forwards the JSON. One tool per verb, same names, same shapes, same named errors.
+An MCP server for agents either imports the use cases under `src/app/` (`inspect.ts`, `view.ts`, `session-edit.ts`, `apply.ts`, `status.ts`, with `realDeps()` from `src/io/deps.ts`) or spawns `adv360 <verb>` and forwards the JSON. One tool per verb, same names, same shapes, same named errors.
 
 Rules the server enforces on top of the CLI:
 

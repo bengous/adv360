@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
-import { decodeObject } from "./decode.ts";
-import { fakeDeps } from "./deps-fake.ts";
+import { decodeObject } from "./io/decode.ts";
+import { fakeDeps } from "./io/deps-fake.ts";
 import { run } from "./main.ts";
 import { FIXTURES } from "./testkit.ts";
 

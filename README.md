@@ -88,4 +88,4 @@ Validated on a real Advantage360 (firmware 1.0.69) on 2026-09-13: a remap writte
 
 ## Development
 
-`bun run check` (format, lint, typecheck, tests, qmllint, shellcheck, version match). Real keyboard files under `tests/fixtures/real/` are byte-for-byte copies and never change. Vocabulary in `CONTEXT.md`, rules in `AGENTS.md`, the SmartSet App research under `research/`.
+`bun run check` (format, lint, import direction between `src/model`, `src/io`, `src/app` and `src/cli`, typecheck, tests, qmllint, shellcheck, version match). Real keyboard files under `tests/fixtures/real/` are byte-for-byte copies and never change. Vocabulary in `CONTEXT.md`, rules in `AGENTS.md`, the SmartSet App research under `research/`.
