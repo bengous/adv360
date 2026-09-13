@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { effectiveLayer, parseEntry, parseLayout, serializeLayout } from "./layout.ts";
+
+import {
+  effectiveLayer,
+  parseEntry,
+  parseLayout,
+  serializeLayout,
+} from "./layout.ts";
 
 const REAL = join(import.meta.dir, "../../tests/fixtures/real/layouts");
 
@@ -9,6 +15,7 @@ describe("layout round-trip", () => {
   test("every real layout file (and the named backup) serializes byte-identical", async () => {
     const names = await readdir(REAL);
     expect(names.length).toBe(10);
+
     for (const name of names) {
       const text = await Bun.file(join(REAL, name)).text();
       expect(serializeLayout(parseLayout(text))).toBe(text);
@@ -28,30 +35,54 @@ describe("layout round-trip", () => {
 
 describe("layout grammar", () => {
   test("remap, tap-and-hold, macro with prefixes and strokes", () => {
-    expect(parseEntry("[caps]>[esc]")).toEqual({ kind: "remap", position: "caps", action: "esc" });
-    expect(parseEntry("[caps]>[caps][t&h500][esc]")).toEqual({
-      kind: "taphold", position: "caps", tap: "caps", ms: 500, hold: "esc",
+    expect(parseEntry("[caps]>[esc]")).toEqual({
+      kind: "remap",
+      position: "caps",
+      action: "esc",
     });
-    expect(parseEntry("{lctr}{hk3}>{s5}{x1}{d125}{dran}{-lshf}{F6}{+lshf}")).toEqual({
-      kind: "macro", trigger: "hk3", cotrigger: "lctr",
+    expect(parseEntry("[caps]>[caps][t&h500][esc]")).toEqual({
+      kind: "taphold",
+      position: "caps",
+      tap: "caps",
+      ms: 500,
+      hold: "esc",
+    });
+    expect(
+      parseEntry("{lctr}{hk3}>{s5}{x1}{d125}{dran}{-lshf}{F6}{+lshf}"),
+    ).toEqual({
+      kind: "macro",
+      trigger: "hk3",
+      cotrigger: "lctr",
       tokens: ["s5", "x1", "d125", "dran", "-lshf", "F6", "+lshf"],
     });
-    expect(parseEntry("{tab}>{h}{i}")).toEqual({ kind: "macro", trigger: "tab", cotrigger: null, tokens: ["h", "i"] });
+    expect(parseEntry("{tab}>{h}{i}")).toEqual({
+      kind: "macro",
+      trigger: "tab",
+      cotrigger: null,
+      tokens: ["h", "i"],
+    });
   });
 
   test("headers are case-insensitive, unknown tokens stay as written, junk is unparsed", () => {
     expect(parseEntry("<KEYPAD>")).toEqual({ kind: "header", layer: "keypad" });
     expect(parseEntry("<layer9>")).toEqual({ kind: "unparsed" });
-    expect(parseEntry("[rctr]>[caxx]")).toEqual({ kind: "remap", position: "rctr", action: "caxx" });
+    expect(parseEntry("[rctr]>[caxx]")).toEqual({
+      kind: "remap",
+      position: "rctr",
+      action: "caxx",
+    });
     expect(parseEntry("[a]>{b}")).toEqual({ kind: "unparsed" });
     expect(parseEntry("   ")).toEqual({ kind: "blank" });
-    expect(parseEntry("*[a]>[b]")).toEqual({ kind: "disabled", inner: { kind: "remap", position: "a", action: "b" } });
+    expect(parseEntry("*[a]>[b]")).toEqual({
+      kind: "disabled",
+      inner: { kind: "remap", position: "a", action: "b" },
+    });
   });
 });
 
 describe("effective layer", () => {
   const layout = parseLayout(
-    [
+    `${[
       "[q]>[w]",
       "<base>",
       "[caps]>[esc]",
@@ -61,14 +92,21 @@ describe("effective layer", () => {
       "{hk3}>{b}",
       "<keypad>",
       "[caps]>[f1]",
-    ].join("\r\n") + "\r\n",
+    ].join("\r\n")}\r\n`,
   );
 
   test("the last non-disabled line of the layer wins, keyed case-insensitively", () => {
     const base = effectiveLayer(layout, "base");
-    expect(base.keys.get("caps")).toEqual({ line: 5, entry: { kind: "remap", position: "CAPS", action: "ent" } });
+    expect(base.keys.get("caps")).toEqual({
+      line: 5,
+      entry: { kind: "remap", position: "CAPS", action: "ent" },
+    });
     expect(base.keys.has("q")).toBe(false);
-    expect(effectiveLayer(layout, "keypad").keys.get("caps")?.entry).toEqual({ kind: "remap", position: "caps", action: "f1" });
+    expect(effectiveLayer(layout, "keypad").keys.get("caps")?.entry).toEqual({
+      kind: "remap",
+      position: "caps",
+      action: "f1",
+    });
   });
 
   test("macros are keyed by trigger and co-trigger", () => {

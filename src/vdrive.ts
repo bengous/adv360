@@ -3,7 +3,8 @@ import type { Deps, Observation } from "./deps.ts";
 import { CliError } from "./errors.ts";
 import { parseSettings } from "./settings.ts";
 import { readText, SETTINGS_REL } from "./source.ts";
-import { loadRecord, type WriteRecord } from "./write.ts";
+import { loadRecord } from "./write.ts";
+import type { WriteRecord } from "./write.ts";
 
 export const VDRIVE_LABEL = "ADV360";
 
@@ -20,23 +21,49 @@ export type VDrive =
 
 export function observe(o: Observation): VDrive {
   const dev = o.devices.find((d) => d.label === VDRIVE_LABEL);
-  if (!dev) return { state: "absent" };
-  return dev.mountpoint ? { state: "mounted", mount: dev.mountpoint, device: dev.path } : { state: "ejected", device: dev.path };
+
+  if (!dev) {
+    return { state: "absent" };
+  }
+
+  return dev.mountpoint
+    ? { state: "mounted", mount: dev.mountpoint, device: dev.path }
+    : { state: "ejected", device: dev.path };
 }
 
 // --source DIR stands for a mounted volume with no device: nothing to eject, by type.
 export type Source = { dir: string; device: string | null };
 
 // ADV360_SOURCE plays --source for every verb: the GUI and the tests run against a copy.
-export async function resolveSource(deps: Deps, sourceFlag: string | undefined): Promise<Source> {
+export async function resolveSource(
+  deps: Deps,
+  sourceFlag: string | undefined,
+): Promise<Source> {
   const dir = sourceFlag ?? process.env["ADV360_SOURCE"];
-  if (dir) return { dir, device: null };
+
+  if (dir) {
+    return { dir, device: null };
+  }
+
   const v = observe(await deps.observe());
-  if (v.state === "mounted") return { dir: v.mount, device: v.device };
-  throw new CliError("not-mounted", `open the v-Drive with ${CHORD.open}, or pass --source DIR`, { next: CHORD.open });
+
+  if (v.state === "mounted") {
+    return { dir: v.mount, device: v.device };
+  }
+
+  throw new CliError(
+    "not-mounted",
+    `open the v-Drive with ${CHORD.open}, or pass --source DIR`,
+    { next: CHORD.open },
+  );
 }
 
-export type ComposedState = "absent" | "mounted" | "ejected" | "busy-writing" | "corrupt-suspected";
+export type ComposedState =
+  | "absent"
+  | "mounted"
+  | "ejected"
+  | "busy-writing"
+  | "corrupt-suspected";
 
 export type VDriveStatus = {
   state: ComposedState;
@@ -49,13 +76,25 @@ export type VDriveStatus = {
   stateDir: string;
 };
 
-export function composeState(observed: VDrive, record: WriteRecord | null): ComposedState {
-  if (record?.phase.kind === "failed") return "corrupt-suspected";
-  if (record?.phase.kind === "writing" || record?.phase.kind === "written") return "busy-writing";
+export function composeState(
+  observed: VDrive,
+  record: WriteRecord | null,
+): ComposedState {
+  if (record?.phase.kind === "failed") {
+    return "corrupt-suspected";
+  }
+
+  if (record?.phase.kind === "writing" || record?.phase.kind === "written") {
+    return "busy-writing";
+  }
+
   return observed.state;
 }
 
-export function nextStep(state: ComposedState, record: WriteRecord | null): string | null {
+export function nextStep(
+  state: ComposedState,
+  record: WriteRecord | null,
+): string | null {
   switch (state) {
     case "absent":
       return `${CHORD.open} to open the v-Drive`;
@@ -76,11 +115,21 @@ export function nextStep(state: ComposedState, record: WriteRecord | null): stri
 
 export async function vdriveStatus(deps: Deps): Promise<VDriveStatus> {
   const sourceEnv = process.env["ADV360_SOURCE"];
-  const observed: VDrive = sourceEnv ? { state: "mounted", mount: sourceEnv, device: null } : observe(await deps.observe());
+
+  const observed: VDrive = sourceEnv
+    ? { state: "mounted", mount: sourceEnv, device: null }
+    : observe(await deps.observe());
+
   const record = await loadRecord(deps.stateDir);
   const state = composeState(observed, record);
-  const settingsText = observed.state === "mounted" ? await readText(observed.mount, SETTINGS_REL) : null;
+
+  const settingsText =
+    observed.state === "mounted"
+      ? await readText(observed.mount, SETTINGS_REL)
+      : null;
+
   const settings = parseSettings(settingsText ?? "");
+
   return {
     state,
     observed,
@@ -97,16 +146,36 @@ export type WatchStep = { changed: boolean; notify: boolean };
 
 export function watchStep(prev: VDrive | null, next: VDrive): WatchStep {
   const changed = JSON.stringify(prev) !== JSON.stringify(next);
-  return { changed, notify: changed && prev?.state === "absent" && next.state === "mounted" };
+
+  return {
+    changed,
+    notify: changed && prev?.state === "absent" && next.state === "mounted",
+  };
 }
 
-export async function watch(deps: Deps, emit: (status: VDriveStatus) => void, intervalMs = 1000): Promise<never> {
+export async function watch(
+  deps: Deps,
+  emit: (status: VDriveStatus) => void,
+  intervalMs = 1000,
+): Promise<never> {
   let prev: VDrive | null = null;
+
   for (;;) {
     const status = await vdriveStatus(deps);
     const step = watchStep(prev, status.observed);
-    if (step.changed) emit(status);
-    if (step.notify) await deps.notify("Advantage360 v-Drive connected", "adv360 gui to edit the keyboard", "normal");
+
+    if (step.changed) {
+      emit(status);
+    }
+
+    if (step.notify) {
+      await deps.notify(
+        "Advantage360 v-Drive connected",
+        "adv360 gui to edit the keyboard",
+        "normal",
+      );
+    }
+
     prev = status.observed;
     await Bun.sleep(intervalMs);
   }
