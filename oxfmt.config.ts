@@ -14,5 +14,8 @@ export default defineConfig({
     "research/**",
     "docs/**",
     "**/*.md",
+    // Vendored from unlockers-skills-library by tools/vendor-rules.sh, never edited here.
+    ".claude/skills/**",
+    ".claude/agents/**",
   ],
 });

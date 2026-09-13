@@ -43,6 +43,12 @@ A timestamped copy of `layouts/ lighting/ settings/` under `~/.local/state/adv36
 **Write record**:
 `~/.local/state/adv360/write.json`, the lock and the log of the one write cycle in flight or awaiting verification.
 
+**Write cycle**:
+The steps of `apply` after the plan: record, backup, temp files, rename, read back, eject. Non-transactional; the write record is the compensation.
+
+**Decision**:
+The pure result of a verb's decide phase (a plan, a verdict, an edited session), computed from gathered data before any side effect.
+
 **Refresh**:
 The keyboard reloading its files after `SmartSet + Hotkey 4`. Only the human triggers it.
 
