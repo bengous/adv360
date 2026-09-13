@@ -5,14 +5,9 @@ import { decodeObject, field } from "./decode.ts";
 import { CliError, messageOf } from "./errors.ts";
 import { isArray, isObject, isString, orNull } from "./json.ts";
 import type { Json } from "./json.ts";
+import type { BlockDevice, Observation } from "./vdrive.ts";
 
-export type BlockDevice = {
-  path: string;
-  label: string | null;
-  mountpoint: string | null;
-};
-
-export type Observation = { devices: BlockDevice[] };
+export type { BlockDevice, Observation } from "./vdrive.ts";
 
 export type Urgency = "low" | "normal" | "critical";
 

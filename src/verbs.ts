@@ -17,11 +17,10 @@ import {
 } from "./session-edit.ts";
 import { editFromFlags } from "./session-flags.ts";
 import { parseProfile } from "./source.ts";
-import { loadSession } from "./state.ts";
 import { findSource, findSourceOrNull } from "./status.ts";
 import { parseLayerName } from "./txt/layout.ts";
 import { verify } from "./verify.ts";
-import { view } from "./view.ts";
+import { viewSession } from "./view.ts";
 
 // One adapter per verb: flags in, use case out. The profile is parsed before the source is looked up.
 export type Verb = (
@@ -44,9 +43,8 @@ export const viewVerb: Verb = async (deps, flags) => {
   const profile = parseProfile(flags.profile);
   const source = await findSource(deps, flags.source);
   const layer = parseLayerName(need(flags, "layer"));
-  const session = await loadSession(deps.stateDir, profile);
 
-  return view(source.dir, profile, layer, session);
+  return viewSession(deps, source, profile, layer);
 };
 
 function sessionEditOf(op: string, flags: Flags): Promise<Edit | null> {

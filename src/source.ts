@@ -1,9 +1,6 @@
 import { basename } from "node:path";
 
-import { field } from "./decode.ts";
 import { CliError } from "./errors.ts";
-import { isString, orNull } from "./json.ts";
-import type { JsonObject } from "./json.ts";
 
 export const PROFILES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
@@ -44,12 +41,5 @@ export const SETTINGS_REL = "settings/settings.txt";
 
 // --source DIR stands for a mounted volume with no device: nothing to eject, by type.
 export type Source = { dir: string; device: string | null };
-
-export function parseSource(object: JsonObject, what: string): Source {
-  return {
-    dir: field(object, "dir", isString, what),
-    device: field(object, "device", orNull(isString), what),
-  };
-}
 
 export type Disk = Record<FileKind, string | null>;

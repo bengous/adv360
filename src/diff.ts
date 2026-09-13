@@ -2,38 +2,13 @@ import { mkdir, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
 
 import type { Deps } from "./deps.ts";
+import { diffTargets } from "./diff-targets.ts";
+import type { DiffTarget } from "./diff-targets.ts";
 import { readDisk } from "./disk.ts";
 import { CliError } from "./errors.ts";
-import { deriveState, render } from "./session.ts";
-import type { SessionContext, SessionState } from "./session.ts";
-import { KINDS, relOf } from "./source.ts";
+import type { SessionState } from "./session.ts";
 import type { Profile, Source } from "./source.ts";
 import { loadContext } from "./state.ts";
-
-export type DiffTarget = { rel: string; before: string; after: string };
-
-export type DiffDecision = { state: SessionState; targets: DiffTarget[] };
-
-export function diffTargets(ctx: SessionContext): DiffDecision {
-  const { session, profile } = ctx;
-
-  if (!session) {
-    throw new CliError("no-session", `no edit session for profile ${profile}`);
-  }
-
-  const targets: DiffTarget[] = [];
-
-  for (const kind of KINDS) {
-    const part = session[kind];
-    const after = render(session, kind);
-
-    if (part && after !== null) {
-      targets.push({ rel: relOf(kind, profile), before: part.baseText, after });
-    }
-  }
-
-  return { state: deriveState(ctx), targets };
-}
 
 async function writeSides(
   stateDir: string,

@@ -1,5 +1,5 @@
-import { sha256 } from "./disk.ts";
 import { CliError } from "./errors.ts";
+import { sha256 } from "./record.ts";
 import type { WriteRecord } from "./record.ts";
 import { deriveState, render } from "./session.ts";
 import type { Session, SessionContext } from "./session.ts";

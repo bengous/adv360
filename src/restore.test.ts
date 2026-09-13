@@ -1,48 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
-import { decideRestore } from "./restore.ts";
-import type { SessionContext } from "./session.ts";
 import { adv, FIXTURES, mountFixture, str } from "./testkit.ts";
 import type { Fixture } from "./testkit.ts";
-
-const ctx = (): SessionContext => ({
-  profile: 9,
-  session: null,
-  record: null,
-  disk: { layout: "<base>\r\n", led: "" },
-});
-
-describe("restore decision", () => {
-  test("given no candidate file, when restoring, then it is restore-source-missing", () => {
-    expect(() => decideRestore(ctx(), [], "/nowhere")).toThrow(
-      "no layout9.txt or led9.txt under /nowhere",
-    );
-  });
-
-  test("given a layout and a led file, when restoring, then both parts open a replace-file edit", () => {
-    const session = decideRestore(
-      ctx(),
-      [
-        { path: "/b/layouts/layout9.txt", text: "<base>\r\n[a]>[b]\r\n" },
-        { path: "/b/lighting/led9.txt", text: "[IND1]>[caps][1][1][1]\r\n" },
-      ],
-      "/b",
-    );
-
-    expect(session).toEqual({
-      profile: 9,
-      layout: {
-        baseText: "<base>\r\n",
-        edits: [{ op: "replace-file", text: "<base>\r\n[a]>[b]\r\n" }],
-      },
-      led: {
-        baseText: "",
-        edits: [{ op: "replace-file", text: "[IND1]>[caps][1][1][1]\r\n" }],
-      },
-    });
-  });
-});
 
 describe("restore from a backup", () => {
   let fx: Fixture;

@@ -1,9 +1,17 @@
 import pkg from "../package.json";
-import type { Observation } from "./deps.ts";
 import { CliError } from "./errors.ts";
 import type { WriteRecord } from "./record.ts";
 import { parseSettings } from "./settings.ts";
 import type { Source } from "./source.ts";
+
+export type BlockDevice = {
+  path: string;
+  label: string | null;
+  mountpoint: string | null;
+};
+
+// What lsblk reports, the input of every v-Drive decision.
+export type Observation = { devices: BlockDevice[] };
 
 export const VDRIVE_LABEL = "ADV360";
 

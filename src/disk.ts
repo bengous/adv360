@@ -4,10 +4,6 @@ import { join } from "node:path";
 import { KINDS, relOf } from "./source.ts";
 import type { Disk, Profile } from "./source.ts";
 
-export function sha256(text: string): string {
-  return new Bun.CryptoHasher("sha256").update(text).digest("hex");
-}
-
 export function isErrno(error: unknown): error is Error & { code: string } {
   return (
     error instanceof Error && "code" in error && typeof error.code === "string"

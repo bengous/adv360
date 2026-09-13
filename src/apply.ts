@@ -3,11 +3,11 @@ import { basename, dirname, join } from "node:path";
 
 import { backup, backupDir } from "./backup.ts";
 import type { Deps } from "./deps.ts";
-import { readDisk, readText, sha256, syncDir, writeSynced } from "./disk.ts";
+import { readDisk, readText, syncDir, writeSynced } from "./disk.ts";
 import { CliError, messageOf } from "./errors.ts";
 import { decideApply, describePlan, recordFor } from "./plan.ts";
 import type { Plan } from "./plan.ts";
-import { withPhase } from "./record.ts";
+import { sha256, withPhase } from "./record.ts";
 import type { ApplyReport, FailedStep, WriteRecord } from "./record.ts";
 import type { Profile, Source } from "./source.ts";
 import {
