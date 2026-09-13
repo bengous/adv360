@@ -31,6 +31,53 @@ function str(object: JsonObject, key: string): string {
   return field(object, key, isString, WHAT);
 }
 
+function layerOf(object: JsonObject): LayerName {
+  return field(object, "layer", isLayer, WHAT);
+}
+
+function cotriggerOf(object: JsonObject): string | null {
+  return field(object, "cotrigger", orNull(isString), WHAT);
+}
+
+function parseRemap(value: JsonObject): LayoutEdit {
+  return {
+    op: "set-remap",
+    layer: layerOf(value),
+    position: str(value, "position"),
+    action: str(value, "action"),
+  };
+}
+
+function parseRemoveMacro(value: JsonObject): LayoutEdit {
+  return {
+    op: "remove-macro",
+    layer: layerOf(value),
+    trigger: str(value, "trigger"),
+    cotrigger: cotriggerOf(value),
+  };
+}
+
+function parseTapHold(value: JsonObject): LayoutEdit {
+  return {
+    op: "set-taphold",
+    layer: layerOf(value),
+    position: str(value, "position"),
+    tap: str(value, "tap"),
+    ms: field(value, "ms", isMs, WHAT),
+    hold: str(value, "hold"),
+  };
+}
+
+function parseMacro(value: JsonObject): LayoutEdit {
+  return {
+    op: "set-macro",
+    layer: layerOf(value),
+    trigger: str(value, "trigger"),
+    cotrigger: cotriggerOf(value),
+    tokens: field(value, "tokens", isTokens, WHAT),
+  };
+}
+
 function parseLayoutEdit(value: Json): LayoutEdit {
   if (!isObject(value)) {
     throw badJson(WHAT, "edits holds a non-object");
@@ -40,42 +87,15 @@ function parseLayoutEdit(value: Json): LayoutEdit {
 
   switch (op) {
     case "set-remap":
-      return {
-        op,
-        layer: field(value, "layer", isLayer, WHAT),
-        position: str(value, "position"),
-        action: str(value, "action"),
-      };
+      return parseRemap(value);
     case "remove":
-      return {
-        op,
-        layer: field(value, "layer", isLayer, WHAT),
-        position: str(value, "position"),
-      };
+      return { op, layer: layerOf(value), position: str(value, "position") };
     case "set-taphold":
-      return {
-        op,
-        layer: field(value, "layer", isLayer, WHAT),
-        position: str(value, "position"),
-        tap: str(value, "tap"),
-        ms: field(value, "ms", isMs, WHAT),
-        hold: str(value, "hold"),
-      };
+      return parseTapHold(value);
     case "set-macro":
-      return {
-        op,
-        layer: field(value, "layer", isLayer, WHAT),
-        trigger: str(value, "trigger"),
-        cotrigger: field(value, "cotrigger", orNull(isString), WHAT),
-        tokens: field(value, "tokens", isTokens, WHAT),
-      };
+      return parseMacro(value);
     case "remove-macro":
-      return {
-        op,
-        layer: field(value, "layer", isLayer, WHAT),
-        trigger: str(value, "trigger"),
-        cotrigger: field(value, "cotrigger", orNull(isString), WHAT),
-      };
+      return parseRemoveMacro(value);
     case "replace-file":
       return { op, text: str(value, "text") };
     default:

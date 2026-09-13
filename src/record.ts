@@ -87,3 +87,15 @@ export function parseRecord(object: JsonObject): WriteRecord {
     phase: parsePhase(field(object, "phase", isObject, WHAT)),
   };
 }
+
+export type ApplyOutcome =
+  | { kind: "ejected"; next: string }
+  | { kind: "verified-by-readback" };
+
+export type ApplyReport = {
+  event: "applied";
+  profile: Profile;
+  backup_dir: string;
+  files: string[];
+  outcome: ApplyOutcome;
+};

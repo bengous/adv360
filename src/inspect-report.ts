@@ -1,5 +1,4 @@
 import type {
-  Entry,
   LayerName,
   Layout,
   LayoutLine,
@@ -7,7 +6,7 @@ import type {
   Remap,
   TapHold,
 } from "./txt/layout.ts";
-import type { Indicator, LedEntry, LedFile, LedLine, Rgb } from "./txt/led.ts";
+import type { Indicator, LedFile, LedLine, Rgb } from "./txt/led.ts";
 import type { Eol } from "./txt/lines.ts";
 
 export type Warning = {
@@ -39,28 +38,57 @@ export type FileReport = {
 
 type Report = { entries: InspectEntry[]; warnings: Warning[] };
 
-const eolName = (eol: Eol) => (eol === "\r\n" ? "crlf" : "lf");
+type At = { line: number; text: string; disabled: boolean };
 
 type Unwrapped<E> = { entry: E; disabled: boolean };
 
-function unwrapLayout(entry: Entry): Unwrapped<Entry> {
+const eolName = (eol: Eol) => (eol === "\r\n" ? "crlf" : "lf");
+
+function unwrap<E extends { kind: string; inner?: E }>(entry: E): Unwrapped<E> {
   let e = entry;
 
-  while (e.kind === "disabled") {
+  while (e.kind === "disabled" && e.inner !== undefined) {
     e = e.inner;
   }
 
   return { entry: e, disabled: e !== entry };
 }
 
-function unwrapLed(entry: LedEntry): Unwrapped<LedEntry> {
-  let e = entry;
+function pushUnparsed(report: Report, at: At): void {
+  if (!at.disabled) {
+    report.warnings.push({ warning: "unparsed", line: at.line, text: at.text });
+  }
+}
 
-  while (e.kind === "disabled") {
-    e = e.inner;
+function pushKey(
+  report: Report,
+  layer: LayerName | null,
+  at: At,
+  entry: Remap | TapHold | Macro,
+): void {
+  if (layer === null && !at.disabled) {
+    report.warnings.push({
+      warning: "missing-layer-header",
+      line: at.line,
+      text: at.text,
+    });
   }
 
-  return { entry: e, disabled: e !== entry };
+  report.entries.push({
+    line: at.line,
+    layer,
+    ...entry,
+    disabled: at.disabled,
+  });
+}
+
+function pushHeader(report: Report, at: At, layer: LayerName): void {
+  report.entries.push({
+    line: at.line,
+    kind: "header",
+    layer,
+    disabled: at.disabled,
+  });
 }
 
 function describeLayoutLine(
@@ -69,32 +97,22 @@ function describeLayoutLine(
   line: number,
   { text, entry: raw }: LayoutLine,
 ): LayerName | null {
-  const { entry, disabled } = unwrapLayout(raw);
+  const { entry, disabled } = unwrap(raw);
+  const at = { line, text, disabled };
 
   switch (entry.kind) {
     case "header":
-      report.entries.push({
-        line,
-        kind: "header",
-        layer: entry.layer,
-        disabled,
-      });
+      pushHeader(report, at, entry.layer);
 
       return entry.layer;
     case "remap":
     case "taphold":
     case "macro":
-      if (layer === null && !disabled) {
-        report.warnings.push({ warning: "missing-layer-header", line, text });
-      }
-
-      report.entries.push({ line, layer, ...entry, disabled });
+      pushKey(report, layer, at, entry);
 
       return layer;
     case "unparsed":
-      if (!disabled) {
-        report.warnings.push({ warning: "unparsed", line, text });
-      }
+      pushUnparsed(report, at);
 
       return layer;
     case "blank":
@@ -121,24 +139,24 @@ function describeLedLine(
   line: number,
   { text, entry: raw }: LedLine,
 ): void {
-  const { entry, disabled } = unwrapLed(raw);
+  const { entry, disabled } = unwrap(raw);
 
   switch (entry.kind) {
-    case "led":
+    case "led": {
+      const { indicator, func, rgb } = entry;
       report.entries.push({
         line,
         kind: "led",
-        indicator: entry.indicator,
-        func: entry.func,
-        rgb: entry.rgb,
+        indicator,
+        func,
+        rgb,
         disabled,
       });
       break;
-    case "unparsed":
-      if (!disabled) {
-        report.warnings.push({ warning: "unparsed", line, text });
-      }
+    }
 
+    case "unparsed":
+      pushUnparsed(report, { line, text, disabled });
       break;
     case "blank":
     case "disabled":

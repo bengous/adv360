@@ -1,7 +1,6 @@
-import { CliError } from "./errors.ts";
 import type { WriteRecord } from "./record.ts";
-import { KINDS, relOf } from "./source.ts";
-import type { Disk, FileKind, Profile, Source } from "./source.ts";
+import { KINDS } from "./source.ts";
+import type { Disk, FileKind, Profile } from "./source.ts";
 import { applyLayoutEdit } from "./txt/layout-edit.ts";
 import type { LayoutEdit } from "./txt/layout-edit.ts";
 import { parseLayout, serializeLayout } from "./txt/layout.ts";
@@ -79,103 +78,4 @@ export function render(session: Session, kind: FileKind): string | null {
     default:
       return kind satisfies never;
   }
-}
-
-export type Edit =
-  | { kind: "layout"; edit: LayoutEdit }
-  | { kind: "led"; edit: LedEdit };
-
-function base(
-  current: string | undefined,
-  onDisk: string | null | undefined,
-  what: string,
-): string {
-  if (current !== undefined) {
-    return current;
-  }
-
-  if (onDisk === null || onDisk === undefined) {
-    throw new CliError(
-      "no-base",
-      `the first edit needs the on-disk ${what}; open the v-Drive or pass --source`,
-    );
-  }
-
-  return onDisk;
-}
-
-// The first edit of a file captures its on-disk base; later edits need no disk.
-function addEdit(ctx: SessionContext, edit: Edit): Session {
-  const { session, profile, disk } = ctx;
-  const next: Session = session ? structuredClone(session) : { profile };
-
-  switch (edit.kind) {
-    case "layout":
-      next.layout = {
-        baseText: base(next.layout?.baseText, disk?.layout, "layout"),
-        edits: [...(next.layout?.edits ?? []), edit.edit],
-      };
-      break;
-    case "led":
-      next.led = {
-        baseText: base(next.led?.baseText, disk?.led, "led file"),
-        edits: [...(next.led?.edits ?? []), edit.edit],
-      };
-      break;
-    default:
-      edit satisfies never;
-  }
-
-  render(next, "layout");
-
-  return next;
-}
-
-export function assertEditable(state: SessionState): void {
-  if (state === "conflict") {
-    throw new CliError(
-      "session-conflict",
-      "the file changed on disk since the session started; discard the session",
-    );
-  }
-
-  if (state === "applied") {
-    throw new CliError(
-      "write-pending",
-      "a write awaits verification; run adv360 verify first",
-    );
-  }
-}
-
-export function decideEdit(ctx: SessionContext, edit: Edit): Session {
-  assertEditable(deriveState(ctx));
-
-  return addEdit(ctx, edit);
-}
-
-export type SessionStatus = {
-  profile: Profile;
-  state: SessionState;
-  source: Source | null;
-  layout: { edits: LayoutEdit[]; renders: string } | null;
-  led: { edits: LedEdit[]; renders: string } | null;
-};
-
-export function sessionStatusOf(
-  ctx: SessionContext,
-  source: Source | null,
-): SessionStatus {
-  const { profile, session } = ctx;
-
-  return {
-    profile,
-    state: deriveState(ctx),
-    source,
-    layout: session?.layout
-      ? { edits: session.layout.edits, renders: relOf("layout", profile) }
-      : null,
-    led: session?.led
-      ? { edits: session.led.edits, renders: relOf("led", profile) }
-      : null,
-  };
 }

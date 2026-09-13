@@ -2,6 +2,7 @@ import { applySession } from "./apply.ts";
 import { backup, backupDir } from "./backup.ts";
 import type { Deps } from "./deps.ts";
 import { diffSession } from "./diff.ts";
+import type { Edit } from "./edit.ts";
 import { UsageError } from "./errors.ts";
 import { need } from "./flags.ts";
 import type { Flags } from "./flags.ts";
@@ -15,7 +16,6 @@ import {
   sessionStatus,
 } from "./session-edit.ts";
 import { editFromFlags } from "./session-flags.ts";
-import type { Edit } from "./session.ts";
 import { parseProfile } from "./source.ts";
 import { loadSession } from "./state.ts";
 import { findSource, findSourceOrNull } from "./status.ts";

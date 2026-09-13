@@ -97,6 +97,25 @@ function blankIndicator(): EffectiveIndicator {
   return { function: "null", colors: {}, lines: [] };
 }
 
+function placeLed(
+  ind: EffectiveIndicator,
+  line: number,
+  func: string,
+  rgb: Rgb,
+): void {
+  if (LAYER_FUNCS.some((f) => f === func)) {
+    if (ind.function !== "layer") {
+      Object.assign(ind, { function: "layer", colors: {}, lines: [] });
+    }
+
+    ind.colors[func] = rgb;
+  } else {
+    Object.assign(ind, { function: func, colors: { [func]: rgb }, lines: [] });
+  }
+
+  ind.lines.push(line);
+}
+
 export function effectiveLeds(
   file: LedFile,
 ): Record<Indicator, EffectiveIndicator> {
@@ -110,28 +129,14 @@ export function effectiveLeds(
   };
 
   for (const [index, { entry }] of file.lines.entries()) {
-    if (entry.kind !== "led") {
-      continue;
+    if (entry.kind === "led") {
+      placeLed(
+        out[entry.indicator],
+        index + 1,
+        entry.func.toLowerCase(),
+        entry.rgb,
+      );
     }
-
-    const func = entry.func.toLowerCase();
-    const ind = out[entry.indicator];
-
-    if (LAYER_FUNCS.some((f) => f === func)) {
-      if (ind.function !== "layer") {
-        Object.assign(ind, { function: "layer", colors: {}, lines: [] });
-      }
-
-      ind.colors[func] = entry.rgb;
-    } else {
-      Object.assign(ind, {
-        function: func,
-        colors: { [func]: entry.rgb },
-        lines: [],
-      });
-    }
-
-    ind.lines.push(index + 1);
   }
 
   return out;

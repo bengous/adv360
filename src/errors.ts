@@ -15,3 +15,7 @@ export class CliError extends Error {
 }
 
 export class UsageError extends Error {}
+
+export function messageOf(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}

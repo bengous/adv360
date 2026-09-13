@@ -2,14 +2,11 @@ import { basename, dirname, join } from "node:path";
 
 import type { Deps } from "./deps.ts";
 import { readDisk, readText } from "./disk.ts";
+import { assertEditable, decideEdit, sessionStatusOf } from "./edit.ts";
+import type { SessionStatus } from "./edit.ts";
 import { CliError } from "./errors.ts";
-import {
-  assertEditable,
-  decideEdit,
-  deriveState,
-  sessionStatusOf,
-} from "./session.ts";
-import type { Session, SessionContext, SessionStatus } from "./session.ts";
+import { deriveState } from "./session.ts";
+import type { Session, SessionContext } from "./session.ts";
 import { KINDS, kindOfName, relOf } from "./source.ts";
 import type { Profile, Source } from "./source.ts";
 import { loadContext, saveSession } from "./state.ts";

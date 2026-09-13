@@ -35,17 +35,26 @@ export function diffTargets(ctx: SessionContext): DiffDecision {
   return { state: deriveState(ctx), targets };
 }
 
-// GNU diff on two temp files: it keeps CRLF and prints the familiar unified format.
-export async function diffFiles(
+async function writeSides(
   stateDir: string,
   target: DiffTarget,
-): Promise<string> {
+): Promise<[string, string]> {
   const tmp = join(stateDir, "tmp");
   await mkdir(tmp, { recursive: true });
   const a = join(tmp, `a-${basename(target.rel)}`);
   const b = join(tmp, `b-${basename(target.rel)}`);
   await Bun.write(a, target.before);
   await Bun.write(b, target.after);
+
+  return [a, b];
+}
+
+// GNU diff on two temp files: it keeps CRLF and prints the familiar unified format.
+export async function diffFiles(
+  stateDir: string,
+  target: DiffTarget,
+): Promise<string> {
+  const [a, b] = await writeSides(stateDir, target);
 
   const proc = Bun.spawn(
     [

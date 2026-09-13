@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { decodeObject, field } from "./decode.ts";
-import { CliError } from "./errors.ts";
+import { CliError, messageOf } from "./errors.ts";
 import { isArray, isObject, isString, orNull } from "./json.ts";
 import type { Json } from "./json.ts";
 
@@ -49,7 +49,7 @@ async function runCommand(
     } catch (error) {
       throw new CliError(
         missing,
-        `${argv[0]} is not installed: ${error instanceof Error ? error.message : String(error)}`,
+        `${argv[0]} is not installed: ${messageOf(error)}`,
       );
     }
   })();
@@ -118,33 +118,37 @@ function warn(line: string): void {
   console.error(line);
 }
 
+async function notify(
+  headline: string,
+  description: string,
+  urgency: Urgency,
+): Promise<void> {
+  try {
+    await runCommand(
+      [
+        "omarchy-notification-send",
+        "--app-name",
+        "adv360",
+        "-u",
+        urgency,
+        headline,
+        description,
+      ],
+      "notification-missing",
+    );
+  } catch (error) {
+    // A missing notifier must never fail a write cycle.
+    warn(`adv360: ${messageOf(error)}`);
+  }
+}
+
 export function realDeps(): Deps {
   return {
     stateDir: defaultStateDir(),
     sourceEnv: process.env["ADV360_SOURCE"] ?? null,
     observe,
     unmount,
-    async notify(headline, description, urgency) {
-      try {
-        await runCommand(
-          [
-            "omarchy-notification-send",
-            "--app-name",
-            "adv360",
-            "-u",
-            urgency,
-            headline,
-            description,
-          ],
-          "notification-missing",
-        );
-      } catch (error) {
-        // A missing notifier must never fail a write cycle.
-        warn(
-          `adv360: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    },
+    notify,
     now: () => new Date(),
     sleep: (ms) => Bun.sleep(ms),
     emit: (line) => console.log(line),

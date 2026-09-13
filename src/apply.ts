@@ -4,11 +4,11 @@ import { basename, dirname, join } from "node:path";
 import { backup, backupDir } from "./backup.ts";
 import type { Deps } from "./deps.ts";
 import { readDisk, readText, sha256, syncDir, writeSynced } from "./disk.ts";
-import { CliError } from "./errors.ts";
+import { CliError, messageOf } from "./errors.ts";
 import { decideApply, describePlan, recordFor } from "./plan.ts";
-import type { ApplyReport, Plan } from "./plan.ts";
+import type { Plan } from "./plan.ts";
 import { withPhase } from "./record.ts";
-import type { FailedStep, WriteRecord } from "./record.ts";
+import type { ApplyReport, FailedStep, WriteRecord } from "./record.ts";
 import type { Profile, Source } from "./source.ts";
 import {
   clearRecord,
@@ -45,10 +45,6 @@ export async function applySession(
   }
 
   return executePlan(deps, decision.plan, ctx.record);
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
 
 function tmpOf(plan: Plan, rel: string): string {

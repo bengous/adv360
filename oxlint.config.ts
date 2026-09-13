@@ -174,16 +174,17 @@ export default defineConfig({
     "eslint/no-lonely-if": "error",
     "eslint/curly": "error",
 
+    // The quality gate of docs/rules: file 150, function 30, complexity 10, params 4, depth 3.
     "eslint/max-lines-per-function": [
       "error",
-      { max: 80, skipBlankLines: true, skipComments: true },
+      { max: 30, skipBlankLines: true, skipComments: true, IIFEs: true },
     ],
-    "eslint/complexity": ["error", { max: 20 }],
-    "eslint/max-depth": ["error", { max: 4 }],
+    "eslint/complexity": ["error", { max: 10 }],
+    "eslint/max-depth": ["error", { max: 3 }],
     "eslint/max-params": ["error", { max: 4 }],
     "eslint/max-lines": [
       "error",
-      { max: 400, skipBlankLines: true, skipComments: true },
+      { max: 150, skipBlankLines: true, skipComments: true },
     ],
 
     "anti-slop/no-array-filter-map": "error",
@@ -220,15 +221,17 @@ export default defineConfig({
         // bun:test types expect.any() and the asymmetric matchers as any.
         "typescript/no-unsafe-assignment": "off",
         "typescript/no-unsafe-argument": "off",
-        // A describe callback groups tests; a scenario test replays one write
-        // cycle end to end.
+        // A describe callback is one function; the test body is capped by
+        // max-statements instead, which also caps the tests per describe.
         "eslint/max-lines-per-function": "off",
+        "eslint/max-statements": ["error", { max: 10 }],
       },
     },
     {
-      // Tool contract: oxlint and oxfmt load their config as the default export.
+      // Tool contract: oxlint and oxfmt load their config as the default export;
+      // the rule table is a list, not code.
       files: ["*.config.ts"],
-      rules: { "import/no-default-export": "off" },
+      rules: { "import/no-default-export": "off", "eslint/max-lines": "off" },
     },
   ],
 });

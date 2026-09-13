@@ -2,9 +2,9 @@ import { basename, dirname } from "node:path";
 
 import type { Deps } from "./deps.ts";
 import { readDisk, readText } from "./disk.ts";
+import { decideEdit, sessionStatusOf } from "./edit.ts";
+import type { Edit, SessionStatus } from "./edit.ts";
 import { CliError, UsageError } from "./errors.ts";
-import { decideEdit, sessionStatusOf } from "./session.ts";
-import type { Edit, SessionStatus } from "./session.ts";
 import { kindOfName } from "./source.ts";
 import type { Profile, Source } from "./source.ts";
 import { loadContext, saveSession } from "./state.ts";

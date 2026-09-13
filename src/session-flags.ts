@@ -1,7 +1,7 @@
+import type { Edit } from "./edit.ts";
 import { UsageError } from "./errors.ts";
 import { need } from "./flags.ts";
 import type { Flags } from "./flags.ts";
-import type { Edit } from "./session.ts";
 import {
   parseLayerName,
   parseMacroTokens,

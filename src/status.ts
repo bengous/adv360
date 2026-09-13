@@ -1,9 +1,8 @@
 import type { Deps } from "./deps.ts";
 import { readText } from "./disk.ts";
 import { CliError } from "./errors.ts";
-import type { ApplyReport } from "./plan.ts";
 import { withPhase } from "./record.ts";
-import type { WriteRecord } from "./record.ts";
+import type { ApplyReport, WriteRecord } from "./record.ts";
 import { SETTINGS_REL } from "./source.ts";
 import type { Source } from "./source.ts";
 import { loadRecord, saveRecord } from "./state.ts";

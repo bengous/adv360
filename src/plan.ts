@@ -70,23 +70,19 @@ function plannedFiles(
 }
 
 // A written record for the same profile means the eject failed: only the eject is retried.
-export function decideApply(
-  ctx: ApplyContext,
-  source: Source,
-  backupDir: string,
-): ApplyDecision {
-  const { record, session, profile } = ctx;
+function ejectToRetry(ctx: ApplyContext, source: Source): WriteRecord | null {
+  const { record, profile } = ctx;
 
-  if (
-    record?.phase.kind === "written" &&
+  return record?.phase.kind === "written" &&
     record.profile === profile &&
     source.device !== null &&
     source.device !== ""
-  ) {
-    return { kind: "retry-eject", record };
-  }
+    ? record
+    : null;
+}
 
-  assertNoCycle(record);
+function sessionToApply(ctx: ApplyContext): Session {
+  const { session, profile } = ctx;
 
   if (!session) {
     throw new CliError("no-session", `no edit session for profile ${profile}`);
@@ -99,7 +95,23 @@ export function decideApply(
     );
   }
 
-  const files = plannedFiles(session, ctx.disk, profile);
+  return session;
+}
+
+export function decideApply(
+  ctx: ApplyContext,
+  source: Source,
+  backupDir: string,
+): ApplyDecision {
+  const record = ejectToRetry(ctx, source);
+
+  if (record !== null) {
+    return { kind: "retry-eject", record };
+  }
+
+  assertNoCycle(ctx.record);
+  const { profile } = ctx;
+  const files = plannedFiles(sessionToApply(ctx), ctx.disk, profile);
 
   if (files.length === 0) {
     throw new CliError(
@@ -154,15 +166,3 @@ export function recordFor(plan: Plan, startedAt: string): WriteRecord {
     phase: { kind: "writing" },
   };
 }
-
-export type ApplyOutcome =
-  | { kind: "ejected"; next: string }
-  | { kind: "verified-by-readback" };
-
-export type ApplyReport = {
-  event: "applied";
-  profile: Profile;
-  backup_dir: string;
-  files: string[];
-  outcome: ApplyOutcome;
-};
