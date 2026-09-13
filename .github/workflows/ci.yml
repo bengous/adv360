@@ -1,0 +1,63 @@
+name: CI
+
+# `bun run check` also runs qmllint, shellcheck and omarchy-plugin-validate,
+# which need an Omarchy host: it stays local, and CI runs the portable gates.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.7.0
+
+      - run: bun ci
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun run test
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # oxlint.config.ts and the TypeScript anti-slop plugin need Node >= 22.18.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.7.0
+
+      - run: bun ci
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Check formatting
+        if: ${{ !cancelled() }}
+        run: bun run fmt:check
