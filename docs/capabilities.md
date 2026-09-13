@@ -50,7 +50,7 @@ Under `--source` steps 8-10 are skipped and the report carries `outcome.kind = "
 
 `apply` rejects `not-mounted`, `no-session`, `no-change`, `session-conflict`, `write-pending`, `write-in-progress`; `failed` does not block a new apply (restore must stay possible). A `written` record for the same profile makes `apply` retry only the eject (`{"event":"retry-eject"}`).
 
-Other named errors: `bad-profile`, `layer-missing`, `no-base` (first edit with no readable disk), `file-missing` (`load-file`), `restore-source-missing`, `no-write-record` (`verify`), `backup-failed`, `write-failed`, `corrupt-suspected` (rename or read-back failed), `eject-failed`, `lsblk-missing` / `lsblk-failed`, `udisksctl-missing`, `diff-failed`, `bad-json` (a state file or the `lsblk` output does not decode).
+Other named errors: `bad-profile`, `layer-missing`, `no-base` (first edit with no readable disk), `file-missing` (`load-file`), `restore-source-missing`, `no-write-record` (`verify`), `backup-failed`, `write-failed`, `corrupt-suspected` (rename or read-back failed), `eject-failed`, `lsblk-missing` / `lsblk-failed`, `udisksctl-missing`, `diff-failed`, `bad-json` (a state file or the `lsblk` output does not decode), `gui-files-missing` / `quickshell-missing` (`gui`), `notification-missing` (never printed: `notify` warns on stderr instead).
 
 ## Deferred to v2
 
