@@ -1,3 +1,4 @@
+import type { Json, JsonObject } from "../json.ts";
 import { STEPS } from "../model/record.ts";
 import type {
   FailedStep,
@@ -9,7 +10,6 @@ import { parseProfile } from "../model/source.ts";
 import type { Source } from "../model/source.ts";
 import { badJson, field } from "./decode.ts";
 import { isArray, isNumber, isObject, isString, orNull } from "./json.ts";
-import type { Json, JsonObject } from "./json.ts";
 
 function parseSource(object: JsonObject, what: string): Source {
   return {

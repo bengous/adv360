@@ -1,14 +1,4 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | readonly Json[]
-  | JsonObject;
-
-export type JsonObject = { readonly [key: string]: Json };
-
-export type Is<T extends Json> = (value: Json | undefined) => value is T;
+import type { Is, Json, JsonObject } from "../json.ts";
 
 export function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);

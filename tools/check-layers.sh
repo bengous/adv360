@@ -22,6 +22,12 @@ forbid model "app|io|cli"
 forbid io "app|cli"
 forbid app "cli"
 
+# Root modules sit under every layer (errors.ts, json.ts, brand.ts), except the entry point and the test kit.
+if grep -lE 'from "\./(app|io|cli)/' src/*.ts | grep -v 'src/main\.ts\|src/main\.test\.ts\|src/testkit\.ts'; then
+  echo "a root module must not import app, io or cli"
+  fail=1
+fi
+
 if grep -rl 'from "\(\.\./\)*\(\./\)\?main\.ts"' src --include='*.ts' | grep -v 'src/main\.test\.ts\|src/testkit\.ts'; then
   echo "only main.test.ts and testkit.ts may import main.ts"
   fail=1

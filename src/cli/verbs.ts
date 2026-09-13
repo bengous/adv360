@@ -14,7 +14,7 @@ import { viewSession } from "../app/view.ts";
 import { UsageError } from "../errors.ts";
 import { backup, backupDir } from "../io/backup.ts";
 import type { Deps } from "../io/deps.ts";
-import type { Json } from "../io/json.ts";
+import type { Json } from "../json.ts";
 import type { Edit } from "../model/edit.ts";
 import { parseProfile } from "../model/source.ts";
 import { parseLayerName } from "../model/txt/layout.ts";

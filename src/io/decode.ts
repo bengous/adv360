@@ -1,6 +1,6 @@
 import { CliError } from "../errors.ts";
+import type { Is, Json, JsonObject } from "../json.ts";
 import { isJsonObject } from "./json.ts";
-import type { Is, Json, JsonObject } from "./json.ts";
 
 export function badJson(what: string, detail: string): CliError {
   return new CliError("bad-json", `${what}: ${detail}`, { what });

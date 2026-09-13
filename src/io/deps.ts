@@ -3,10 +3,10 @@ import { join } from "node:path";
 
 import { CliError, messageOf } from "../errors.ts";
 import type { ErrorCode } from "../errors.ts";
+import type { Json } from "../json.ts";
 import type { BlockDevice, Observation } from "../model/vdrive.ts";
 import { decodeObject, field } from "./decode.ts";
 import { isArray, isObject, isString, orNull } from "./json.ts";
-import type { Json } from "./json.ts";
 
 export type { BlockDevice, Observation } from "../model/vdrive.ts";
 

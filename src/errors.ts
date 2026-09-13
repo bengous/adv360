@@ -1,4 +1,4 @@
-import type { Json } from "./io/json.ts";
+import type { Json } from "./json.ts";
 
 // The public error names of docs/capabilities.md; errors.test.ts keeps the two in step.
 export const ERROR_CODES = [

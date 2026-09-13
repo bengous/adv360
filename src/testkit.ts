@@ -6,7 +6,7 @@ import { decodeObject, field } from "./io/decode.ts";
 import { fakeDeps } from "./io/deps-fake.ts";
 import type { FakeDeps } from "./io/deps-fake.ts";
 import { isString } from "./io/json.ts";
-import type { JsonObject } from "./io/json.ts";
+import type { JsonObject } from "./json.ts";
 import { run } from "./main.ts";
 import type { WriteRecord } from "./model/record.ts";
 import type { Profile } from "./model/source.ts";

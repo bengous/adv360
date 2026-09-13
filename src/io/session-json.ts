@@ -1,3 +1,4 @@
+import type { Is, Json, JsonObject } from "../json.ts";
 import type { Session } from "../model/session.ts";
 import { parseProfile } from "../model/source.ts";
 import type { LayoutEdit } from "../model/txt/layout-edit.ts";
@@ -8,7 +9,6 @@ import { INDICATORS, isRgb } from "../model/txt/led.ts";
 import type { Indicator, Rgb } from "../model/txt/led.ts";
 import { badJson, field } from "./decode.ts";
 import { isArray, isNumber, isObject, isString, orNull } from "./json.ts";
-import type { Is, Json, JsonObject } from "./json.ts";
 
 const WHAT = "session file";
 
