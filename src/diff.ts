@@ -79,7 +79,7 @@ export type DiffReport = {
   files: { rel: string; diff: string }[];
 };
 
-export async function diffVerb(
+export async function diffSession(
   deps: Deps,
   profile: Profile,
   source: Source | null,

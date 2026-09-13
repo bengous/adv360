@@ -21,7 +21,7 @@ import { ejectAfterWrite } from "./status.ts";
 
 export type DryRunReport = { event: "dry-run"; profile: Profile };
 
-export async function applyVerb(
+export async function applySession(
   deps: Deps,
   profile: Profile,
   source: Source,
