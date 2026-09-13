@@ -27,8 +27,10 @@ export function observe(o: Observation): VDrive {
 // --source DIR stands for a mounted volume with no device: nothing to eject, by type.
 export type Source = { dir: string; device: string | null };
 
+// ADV360_SOURCE plays --source for every verb: the GUI and the tests run against a copy.
 export async function resolveSource(deps: Deps, sourceFlag: string | undefined): Promise<Source> {
-  if (sourceFlag) return { dir: sourceFlag, device: null };
+  const dir = sourceFlag ?? process.env["ADV360_SOURCE"];
+  if (dir) return { dir, device: null };
   const v = observe(await deps.observe());
   if (v.state === "mounted") return { dir: v.mount, device: v.device };
   throw new CliError("not-mounted", `open the v-Drive with ${CHORD.open}, or pass --source DIR`, { next: CHORD.open });
@@ -73,7 +75,8 @@ export function nextStep(state: ComposedState, record: WriteRecord | null): stri
 }
 
 export async function vdriveStatus(deps: Deps): Promise<VDriveStatus> {
-  const observed = observe(await deps.observe());
+  const sourceEnv = process.env["ADV360_SOURCE"];
+  const observed: VDrive = sourceEnv ? { state: "mounted", mount: sourceEnv, device: null } : observe(await deps.observe());
   const record = await loadRecord(deps.stateDir);
   const state = composeState(observed, record);
   const settingsText = observed.state === "mounted" ? await readText(observed.mount, SETTINGS_REL) : null;

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc --noEmit && bun test && [ \"$(jq -r .version manifest.json)\" = \"$(jq -r .version package.json)\" ]",
+    "check": "tsc --noEmit && bun test && qmllint -I /usr/lib/qt6/qml -I \"${OMARCHY_PATH:-/usr/share/omarchy}/shell\" gui/*.qml gui/components/*.qml && [ \"$(jq -r .version manifest.json)\" = \"$(jq -r .version package.json)\" ]",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },

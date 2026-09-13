@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { realDeps, type Deps } from "./deps.ts";
 import { CliError, UsageError } from "./errors.ts";
+import { launchGui } from "./gui.ts";
 import { inspect } from "./inspect.ts";
 import {
   addEdit,
@@ -24,6 +25,7 @@ import { backup, describePlan, diffFiles, ejectAfterWrite, executeApply, loadRec
 
 const USAGE = `usage: adv360 <verb> [flags]
   vdrive status                       composed v-Drive state, active profile, next chord
+  vdrive eject                        udisksctl unmount, then the human closes the v-Drive
   watch                               JSON line per change, notification on mount
   inspect [--profile N]               raw entries of every profile
   view --profile N --layer L          effective action per key (L: base kp fn1 fn2 fn3)
@@ -221,6 +223,16 @@ async function applyVerb(deps: Deps, flags: Flags): Promise<unknown> {
 function handlers(deps: Deps): Record<string, (flags: Flags, positionals: string[]) => Promise<unknown>> {
   return {
     "vdrive status": () => vdriveStatus(deps),
+    "vdrive eject": async () => {
+      const status = await vdriveStatus(deps);
+      if (status.observed.state !== "mounted" || status.observed.device === null) {
+        throw new CliError("not-mounted", "nothing to eject", { next: status.next });
+      }
+      if (status.pending_write?.phase.kind === "writing") throw new CliError("write-in-progress", "a write cycle is running");
+      await deps.unmount(status.observed.device);
+      return { event: "ejected", device: status.observed.device, next: `${CHORD.close} to close the v-Drive` };
+    },
+    gui: () => launchGui(),
     watch: () => watch(deps, (status) => console.log(JSON.stringify(status))),
     inspect: async (flags) => inspect((await resolveSource(deps, flags.source)).dir, flags.profile === undefined ? undefined : parseProfile(flags.profile)),
     view: async (flags) => {
