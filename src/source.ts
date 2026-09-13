@@ -45,9 +45,9 @@ export async function listNamedBackups(dir: string): Promise<string[]> {
   const out: string[] = [];
 
   for (const sub of ["layouts", "lighting"]) {
-    const names = await readdir(join(dir, sub)).catch(() => []);
+    const names = await readdir(join(dir, sub)).catch((): string[] => []);
 
-    for (const name of names.sort()) {
+    for (const name of names.toSorted()) {
       if (!PROFILE_FILE.test(name)) {
         out.push(`${sub}/${name}`);
       }

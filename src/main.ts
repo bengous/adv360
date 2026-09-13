@@ -243,7 +243,7 @@ function sessionEdit(op: string, flags: Flags): Edit {
         },
       };
     case "remove":
-      if (flags.pos) {
+      if (flags.pos !== undefined && flags.pos !== "") {
         return {
           kind: "layout",
           edit: { op: "remove", layer: needLayer(flags), position: flags.pos },
@@ -375,7 +375,8 @@ async function applyVerb(deps: Deps, flags: Flags): Promise<unknown> {
   if (
     record?.phase.kind === "written" &&
     record.profile === profile &&
-    source.device
+    source.device !== null &&
+    source.device !== ""
   ) {
     console.log(
       JSON.stringify({ event: "retry-eject", device: source.device }),
@@ -387,7 +388,7 @@ async function applyVerb(deps: Deps, flags: Flags): Promise<unknown> {
   const plan = await planApply(deps, source, profile);
   console.log(JSON.stringify(describePlan(plan)));
 
-  if (flags["dry-run"]) {
+  if (flags["dry-run"] === true) {
     return { event: "dry-run", profile };
   }
 
@@ -456,7 +457,7 @@ function handlers(
     restore: async (flags, positionals) => {
       const from = positionals[1];
 
-      if (!from) {
+      if (from === undefined || from === "") {
         throw new UsageError("restore needs a backup dir or a .txt file");
       }
 

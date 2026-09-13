@@ -111,7 +111,7 @@ describe("effective layer", () => {
 
   test("macros are keyed by trigger and co-trigger", () => {
     const base = effectiveLayer(layout, "base");
-    expect([...base.macros.keys()].sort()).toEqual(["hk3+", "hk3+lctr"]);
+    expect([...base.macros.keys()].toSorted()).toEqual(["hk3+", "hk3+lctr"]);
     expect(base.macros.get("hk3+lctr")?.line).toBe(6);
   });
 });

@@ -94,7 +94,7 @@ function layerKeys(text: string, layer: LayerName): ViewKey[] {
         position,
         kind: "default",
         action,
-        label: action ? labelOf(action) : "",
+        label: action !== null && action !== "" ? labelOf(action) : "",
         macros,
       };
     }

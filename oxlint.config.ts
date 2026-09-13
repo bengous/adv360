@@ -218,6 +218,9 @@ export default defineConfig({
         "typescript/no-unsafe-type-assertion": "off",
         // bun:test types expect.any() as any.
         "typescript/no-unsafe-assignment": "off",
+        // A describe callback groups tests; a scenario test replays one write
+        // cycle end to end.
+        "eslint/max-lines-per-function": "off",
       },
     },
     {

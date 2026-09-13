@@ -6,6 +6,20 @@ import { view } from "./view.ts";
 
 const REAL = join(import.meta.dir, "../tests/fixtures/real");
 
+async function run(...args: string[]) {
+  const p = Bun.spawn(["bun", join(import.meta.dir, "main.ts"), ...args], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+
+  const [stdout, stderr] = await Promise.all([
+    new Response(p.stdout).text(),
+    new Response(p.stderr).text(),
+  ]);
+
+  return { code: await p.exited, stdout, stderr };
+}
+
 describe("inspect on the keyboard mirror", () => {
   test("reports 9 profiles, the active one, the firmware and the named backup", async () => {
     const report = await inspect(REAL);
@@ -119,20 +133,6 @@ describe("view on the keyboard mirror", () => {
 });
 
 describe("adv360 exit codes", () => {
-  const run = async (...args: string[]) => {
-    const p = Bun.spawn(["bun", join(import.meta.dir, "main.ts"), ...args], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-
-    const [stdout, stderr] = await Promise.all([
-      new Response(p.stdout).text(),
-      new Response(p.stderr).text(),
-    ]);
-
-    return { code: await p.exited, stdout, stderr };
-  };
-
   test("0 with JSON, 1 with a named error, 2 on usage", async () => {
     const ok = await run(
       "view",

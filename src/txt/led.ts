@@ -138,27 +138,25 @@ export type EffectiveIndicator = {
   lines: number[];
 };
 
+function blankIndicator(): EffectiveIndicator {
+  return { function: "null", colors: {}, lines: [] };
+}
+
 export function effectiveLeds(
   file: LedFile,
 ): Record<Indicator, EffectiveIndicator> {
-  const blank = (): EffectiveIndicator => ({
-    function: "null",
-    colors: {},
-    lines: [],
-  });
-
   const out: Record<Indicator, EffectiveIndicator> = {
-    IND1: blank(),
-    IND2: blank(),
-    IND3: blank(),
-    IND4: blank(),
-    IND5: blank(),
-    IND6: blank(),
+    IND1: blankIndicator(),
+    IND2: blankIndicator(),
+    IND3: blankIndicator(),
+    IND4: blankIndicator(),
+    IND5: blankIndicator(),
+    IND6: blankIndicator(),
   };
 
-  file.lines.forEach(({ entry }, index) => {
+  for (const [index, { entry }] of file.lines.entries()) {
     if (entry.kind !== "led") {
-      return;
+      continue;
     }
 
     const func = entry.func.toLowerCase();
@@ -179,7 +177,7 @@ export function effectiveLeds(
     }
 
     ind.lines.push(index + 1);
-  });
+  }
 
   return out;
 }

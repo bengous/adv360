@@ -147,7 +147,7 @@ export async function backup(
   const files: string[] = [];
 
   for (const sub of BACKUP_SUBDIRS) {
-    const names = await readdir(join(sourceDir, sub)).catch(() => []);
+    const names = await readdir(join(sourceDir, sub)).catch((): string[] => []);
 
     if (names.length === 0) {
       continue;
@@ -155,7 +155,7 @@ export async function backup(
 
     await mkdir(join(dir, sub), { recursive: true });
 
-    for (const name of names.sort()) {
+    for (const name of names.toSorted()) {
       const file = Bun.file(join(sourceDir, sub, name));
 
       if (file.size === 0 && !(await file.exists())) {

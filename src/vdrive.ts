@@ -26,7 +26,7 @@ export function observe(o: Observation): VDrive {
     return { state: "absent" };
   }
 
-  return dev.mountpoint
+  return dev.mountpoint !== null && dev.mountpoint !== ""
     ? { state: "mounted", mount: dev.mountpoint, device: dev.path }
     : { state: "ejected", device: dev.path };
 }
@@ -41,7 +41,7 @@ export async function resolveSource(
 ): Promise<Source> {
   const dir = sourceFlag ?? process.env["ADV360_SOURCE"];
 
-  if (dir) {
+  if (dir !== undefined && dir !== "") {
     return { dir, device: null };
   }
 
@@ -116,9 +116,10 @@ export function nextStep(
 export async function vdriveStatus(deps: Deps): Promise<VDriveStatus> {
   const sourceEnv = process.env["ADV360_SOURCE"];
 
-  const observed: VDrive = sourceEnv
-    ? { state: "mounted", mount: sourceEnv, device: null }
-    : observe(await deps.observe());
+  const observed: VDrive =
+    sourceEnv !== undefined && sourceEnv !== ""
+      ? { state: "mounted", mount: sourceEnv, device: null }
+      : observe(await deps.observe());
 
   const record = await loadRecord(deps.stateDir);
   const state = composeState(observed, record);

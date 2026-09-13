@@ -134,6 +134,25 @@ export type Edit =
   | { kind: "layout"; edit: LayoutEdit }
   | { kind: "led"; edit: LedEdit };
 
+function base(
+  current: string | undefined,
+  onDisk: string | null | undefined,
+  what: string,
+): string {
+  if (current !== undefined) {
+    return current;
+  }
+
+  if (onDisk === null || onDisk === undefined) {
+    throw new CliError(
+      "no-base",
+      `the first edit needs the on-disk ${what}; open the v-Drive or pass --source`,
+    );
+  }
+
+  return onDisk;
+}
+
 // The first edit of a file captures its on-disk base; later edits need no disk.
 export function addEdit(
   session: Session | null,
@@ -142,25 +161,6 @@ export function addEdit(
   disk: Disk | null,
 ): Session {
   const next: Session = session ? structuredClone(session) : { profile };
-
-  const base = (
-    current: string | undefined,
-    onDisk: string | null | undefined,
-    what: string,
-  ): string => {
-    if (current !== undefined) {
-      return current;
-    }
-
-    if (onDisk === null || onDisk === undefined) {
-      throw new CliError(
-        "no-base",
-        `the first edit needs the on-disk ${what}; open the v-Drive or pass --source`,
-      );
-    }
-
-    return onDisk;
-  };
 
   switch (edit.kind) {
     case "layout":

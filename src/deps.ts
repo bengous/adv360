@@ -132,14 +132,16 @@ export function fakeDeps(
     unmounted: [],
     notifications: [],
     failUnmount: false,
-    async observe() {
-      return { devices: fake.devices.map((d) => ({ ...d })) };
+    observe() {
+      return Promise.resolve({
+        devices: fake.devices.map((d) => ({ ...d })),
+      });
     },
-    async unmount(device) {
+    unmount(device) {
       if (fake.failUnmount) {
-        throw new CliError("eject-failed", "fake udisksctl refused", {
-          device,
-        });
+        return Promise.reject(
+          new CliError("eject-failed", "fake udisksctl refused", { device }),
+        );
       }
 
       fake.unmounted.push(device);
@@ -149,9 +151,13 @@ export function fakeDeps(
           d.mountpoint = null;
         }
       }
+
+      return Promise.resolve();
     },
-    async notify(headline, description, urgency) {
+    notify(headline, description, urgency) {
       fake.notifications.push({ headline, description, urgency });
+
+      return Promise.resolve();
     },
     now: () => new Date("2026-09-13T12:00:00Z"),
   };

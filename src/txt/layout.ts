@@ -165,7 +165,7 @@ export function renderEntry(
     case "set-taphold":
       return `[${edit.position}]>[${edit.tap}][t&h${String(edit.ms).padStart(3, "0")}][${edit.hold}]`;
     case "set-macro":
-      return `${edit.cotrigger ? `{${edit.cotrigger}}` : ""}{${edit.trigger}}>${edit.tokens.map((t) => `{${t}}`).join("")}`;
+      return `${edit.cotrigger !== null && edit.cotrigger !== "" ? `{${edit.cotrigger}}` : ""}{${edit.trigger}}>${edit.tokens.map((t) => `{${t}}`).join("")}`;
     default:
       return edit satisfies never;
   }
@@ -236,11 +236,12 @@ export function applyLayoutEdit(layout: Layout, edit: LayoutEdit): Layout {
 
   const text = renderEntry(edit);
   let last = -1;
-  lines.forEach((l, i) => {
+
+  for (const [i, l] of lines.entries()) {
     if (inLayer(i) && matches(l.entry, edit)) {
       last = i;
     }
-  });
+  }
 
   if (last >= 0) {
     lines[last] = makeLine(text, eolOf(lines[last]!.raw, layout.eol));
@@ -249,11 +250,12 @@ export function applyLayoutEdit(layout: Layout, edit: LayoutEdit): Layout {
   }
 
   let end = -1;
-  lines.forEach((l, i) => {
+
+  for (const [i, l] of lines.entries()) {
     if (inLayer(i) && l.entry.kind !== "blank") {
       end = i;
     }
-  });
+  }
 
   if (end < 0) {
     throw new LayerMissing(edit.layer);
@@ -289,35 +291,35 @@ export function effectiveLayer(
   const keys = new Map<string, Located<Remap | TapHold>>();
   const macros = new Map<string, Located<Macro>>();
   let current: LayerName | null = null;
-  layout.lines.forEach(({ entry }, index) => {
+
+  for (const [index, { entry }] of layout.lines.entries()) {
     const line = index + 1;
 
     switch (entry.kind) {
       case "header":
         current = entry.layer;
-
-        return;
+        break;
       case "remap":
       case "taphold":
         if (current === layer) {
           keys.set(entry.position.toLowerCase(), { line, entry });
         }
 
-        return;
+        break;
       case "macro":
         if (current === layer) {
           macros.set(macroKey(entry.trigger, entry.cotrigger), { line, entry });
         }
 
-        return;
+        break;
       case "disabled":
       case "blank":
       case "unparsed":
-        return;
+        break;
       default:
         entry satisfies never;
     }
-  });
+  }
 
   return { keys, macros };
 }

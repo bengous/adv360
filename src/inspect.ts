@@ -46,48 +46,49 @@ function layoutReport(file: string, text: string): FileReport {
   const entries: Record<string, unknown>[] = [];
   const warnings: Warning[] = [];
   let layer: LayerName | null = null;
-  layout.lines.forEach(({ text, entry }, index) => {
+
+  for (const [index, { text: lineText, entry }] of layout.lines.entries()) {
     const line = index + 1;
+    const disabled = entry.kind === "disabled";
+    let e: Entry = entry;
 
-    const describe = (e: Entry, disabled: boolean): void => {
-      switch (e.kind) {
-        case "header":
-          layer = e.layer;
-          entries.push({ line, kind: "header", layer: e.layer, disabled });
+    while (e.kind === "disabled") {
+      e = e.inner;
+    }
 
-          return;
-        case "remap":
-        case "taphold":
-        case "macro": {
-          if (layer === null && !disabled) {
-            warnings.push({ warning: "missing-layer-header", line, text });
-          }
-
-          const { kind, ...fields } = e;
-          entries.push({ line, layer, kind, ...fields, disabled });
-
-          return;
+    switch (e.kind) {
+      case "header":
+        layer = e.layer;
+        entries.push({ line, kind: "header", layer: e.layer, disabled });
+        break;
+      case "remap":
+      case "taphold":
+      case "macro": {
+        if (layer === null && !disabled) {
+          warnings.push({
+            warning: "missing-layer-header",
+            line,
+            text: lineText,
+          });
         }
 
-        case "disabled":
-          describe(e.inner, true);
-
-          return;
-        case "blank":
-          return;
-        case "unparsed":
-          if (!disabled) {
-            warnings.push({ warning: "unparsed", line, text });
-          }
-
-          return;
-        default:
-          e satisfies never;
+        const { kind, ...fields } = e;
+        entries.push({ line, layer, kind, ...fields, disabled });
+        break;
       }
-    };
 
-    describe(entry, false);
-  });
+      case "blank":
+        break;
+      case "unparsed":
+        if (!disabled) {
+          warnings.push({ warning: "unparsed", line, text: lineText });
+        }
+
+        break;
+      default:
+        e satisfies never;
+    }
+  }
 
   return { file, eol: eolName(layout.eol), entries, warnings };
 }
@@ -96,7 +97,8 @@ function ledReport(file: string, text: string): FileReport {
   const led = parseLed(text);
   const entries: Record<string, unknown>[] = [];
   const warnings: Warning[] = [];
-  led.lines.forEach(({ text, entry }, index) => {
+
+  for (const [index, { text: lineText, entry }] of led.lines.entries()) {
     const line = index + 1;
 
     const describe = (e: LedEntry, disabled: boolean): void => {
@@ -110,27 +112,25 @@ function ledReport(file: string, text: string): FileReport {
             rgb: e.rgb,
             disabled,
           });
-
-          return;
+          break;
         case "disabled":
           describe(e.inner, true);
-
-          return;
+          break;
         case "blank":
-          return;
+          break;
         case "unparsed":
           if (!disabled) {
-            warnings.push({ warning: "unparsed", line, text });
+            warnings.push({ warning: "unparsed", line, text: lineText });
           }
 
-          return;
+          break;
         default:
           e satisfies never;
       }
     };
 
     describe(entry, false);
-  });
+  }
 
   return { file, eol: eolName(led.eol), entries, warnings };
 }
