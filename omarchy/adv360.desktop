@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Kinesis Advantage360
+Comment=Edit the Advantage360 layout on the v-Drive
+Exec=adv360 gui
+TryExec=adv360
+Icon=adv360
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=keyboard;kinesis;smartset;layout;

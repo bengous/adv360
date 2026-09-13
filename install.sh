@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # Builds the adv360 binary and installs it for the current user.
-# Side effects: writes $SHAREDIR (gui + data), $BINDIR/adv360, and adds one row to
-# ~/.config/omarchy/extensions/omarchy-menu.jsonc when the "kinesis" id is absent.
+# Side effects: writes $SHAREDIR (gui + data), $BINDIR/adv360, $APPDIR/adv360.desktop,
+# $ICONDIR/adv360.png, and adds one row to ~/.config/omarchy/extensions/omarchy-menu.jsonc
+# when the "kinesis" id is absent.
 # It never touches Hyprland config: the bind line is printed for you to paste.
 set -euo pipefail
 
 BINDIR="${BINDIR:-$HOME/.local/bin}"
 SHAREDIR="${SHAREDIR:-$HOME/.local/share/kinesis-smartset-arch}"
+APPDIR="${APPDIR:-$HOME/.local/share/applications}"
+ICONDIR="${ICONDIR:-$HOME/.local/share/icons/hicolor/256x256/apps}"
 MENU_EXT="${MENU_EXT:-$HOME/.config/omarchy/extensions/omarchy-menu.jsonc}"
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,6 +26,10 @@ bun build --compile --outfile "$tmp/adv360" src/main.ts >/dev/null
 install -d "$SHAREDIR" "$BINDIR"
 rm -rf -- "$SHAREDIR/gui" "$SHAREDIR/data"
 cp -r gui data "$SHAREDIR/"
+install -Dm644 omarchy/adv360.png "$ICONDIR/adv360.png"
+install -Dm644 omarchy/adv360.desktop "$APPDIR/adv360.desktop"
+update-desktop-database "$APPDIR" &>/dev/null || true
+gtk-update-icon-cache "$HOME/.local/share/icons/hicolor" &>/dev/null || true
 
 binary_tmp="$(mktemp "$BINDIR/.adv360.tmp.XXXXXX")"
 install -m 755 "$tmp/adv360" "$binary_tmp"

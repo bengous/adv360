@@ -11,7 +11,7 @@ git clone https://github.com/bengous/kinesis-smartset-arch ~/Work/kinesis-smarts
 cd ~/Work/kinesis-smartset-arch && ./install.sh
 ```
 
-`install.sh` builds with `bun`, installs `~/.local/bin/adv360` and `~/.local/share/kinesis-smartset-arch/`, and adds a `Kinesis 360` row to the Omarchy menu extension file. It prints the optional Hyprland bind and the optional `omarchy plugin add … --enable` command that runs `adv360 watch` as a shell service (a notification when the v-Drive mounts). It never edits Hyprland config.
+`install.sh` builds with `bun`, installs `~/.local/bin/adv360` and `~/.local/share/kinesis-smartset-arch/`, adds a `Kinesis Advantage360` entry with its icon to the app launcher (`~/.local/share/applications/adv360.desktop`), and adds a `Kinesis 360` row to the Omarchy menu extension file. It prints the optional Hyprland bind and the optional `omarchy plugin add … --enable` command that runs `adv360 watch` as a shell service (a notification when the v-Drive mounts). It never edits Hyprland config.
 
 ## Choreography
 
