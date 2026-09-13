@@ -1,5 +1,5 @@
 pre-commit:
   commands:
     fix-and-format:
-      run: tools/hooks/fix-and-format.sh --commit {staged_files}
+      run: .claude/hooks/fix-and-format.sh --commit {staged_files}
       stage_fixed: true

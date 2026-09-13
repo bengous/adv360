@@ -31,7 +31,7 @@ done
 
 if [ ${#code[@]} -gt 0 ]; then
   if [ "$commit" = 1 ]; then
-    bunx oxlint -c tools/hooks/unused-imports.json \
+    bunx oxlint -c .claude/hooks/unused-imports.json \
       --ignore-pattern 'tools/oxlint/anti-slop/**' --fix --silent "${code[@]}" || true
   fi
   # One oxlint run applies one round of fixes; a fix often unlocks another
