@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
 import { inspect } from "./inspect.ts";
+import { parseMacroTokens } from "./txt/layout.ts";
 import { view } from "./view.ts";
 
 const REAL = join(import.meta.dir, "../tests/fixtures/real");
@@ -103,7 +104,11 @@ describe("view on the keyboard mirror", () => {
     const hk3 = report.keys.find((k) => k.position === "hk3")!;
     expect(hk3.kind).toBe("default");
     expect(hk3.macros).toEqual([
-      { cotrigger: "lctr", tokens: ["s5", "x1", "lshf", "F6"], line: 6 },
+      {
+        cotrigger: "lctr",
+        tokens: parseMacroTokens("{s5}{x1}{lshf}{F6}"),
+        line: 6,
+      },
     ]);
     expect(report.leds!.IND3.function).toBe("layer");
   });

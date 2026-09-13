@@ -2,17 +2,14 @@ import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import { CliError } from "./errors.ts";
-import { layoutRel, ledRel, readText } from "./source.ts";
-import type { Profile } from "./source.ts";
-import {
-  applyLayoutEdit,
-  LayerMissing,
-  parseLayout,
-  serializeLayout,
-} from "./txt/layout.ts";
-import type { LayoutEdit } from "./txt/layout.ts";
-import { applyLedEdit, parseLed, serializeLed } from "./txt/led.ts";
-import type { LedEdit } from "./txt/led.ts";
+import { KINDS } from "./source.ts";
+import type { Disk, FileKind, Profile } from "./source.ts";
+import { applyLayoutEdit } from "./txt/layout-edit.ts";
+import type { LayoutEdit } from "./txt/layout-edit.ts";
+import { parseLayout, serializeLayout } from "./txt/layout.ts";
+import { applyLedEdit } from "./txt/led-edit.ts";
+import type { LedEdit } from "./txt/led-edit.ts";
+import { parseLed, serializeLed } from "./txt/led.ts";
 import type { WriteRecord } from "./write.ts";
 
 export type Session = {
@@ -53,15 +50,6 @@ export async function saveSession(
   await Bun.write(path, `${JSON.stringify(session, null, 2)}\n`);
 }
 
-export type Disk = { layout: string | null; led: string | null };
-
-export async function readDisk(dir: string, profile: Profile): Promise<Disk> {
-  return {
-    layout: await readText(dir, layoutRel(profile)),
-    led: await readText(dir, ledRel(profile)),
-  };
-}
-
 // Derived, never stored. An unreadable disk (no v-Drive) keeps the session dirty, not conflict.
 export function deriveState(
   session: Session | null,
@@ -80,54 +68,44 @@ export function deriveState(
     return "clean";
   }
 
-  if (disk) {
-    if (
-      session.layout &&
-      disk.layout !== null &&
-      session.layout.baseText !== disk.layout
-    ) {
-      return "conflict";
-    }
+  const conflict = KINDS.some((kind) => {
+    const part = session[kind];
+    const onDisk = disk?.[kind];
 
-    if (session.led && disk.led !== null && session.led.baseText !== disk.led) {
-      return "conflict";
-    }
-  }
-
-  return "dirty";
-}
-
-export function renderLayout(session: Session): string | null {
-  if (!session.layout) {
-    return null;
-  }
-
-  try {
-    return serializeLayout(
-      session.layout.edits.reduce(
-        applyLayoutEdit,
-        parseLayout(session.layout.baseText),
-      ),
+    return (
+      part !== undefined &&
+      onDisk !== null &&
+      onDisk !== undefined &&
+      part.baseText !== onDisk
     );
-  } catch (error) {
-    if (error instanceof LayerMissing) {
-      throw new CliError("layer-missing", error.message, {
-        layer: error.layer,
-      });
-    }
+  });
 
-    throw error;
-  }
+  return conflict ? "conflict" : "dirty";
 }
 
-export function renderLed(session: Session): string | null {
-  if (!session.led) {
-    return null;
+export function render(session: Session, kind: FileKind): string | null {
+  switch (kind) {
+    case "layout":
+      return session.layout
+        ? serializeLayout(
+            session.layout.edits.reduce(
+              applyLayoutEdit,
+              parseLayout(session.layout.baseText),
+            ),
+          )
+        : null;
+    case "led":
+      return session.led
+        ? serializeLed(
+            session.led.edits.reduce(
+              applyLedEdit,
+              parseLed(session.led.baseText),
+            ),
+          )
+        : null;
+    default:
+      return kind satisfies never;
   }
-
-  return serializeLed(
-    session.led.edits.reduce(applyLedEdit, parseLed(session.led.baseText)),
-  );
 }
 
 export type Edit =
@@ -179,7 +157,7 @@ export function addEdit(
       edit satisfies never;
   }
 
-  renderLayout(next);
+  render(next, "layout");
 
   return next;
 }

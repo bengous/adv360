@@ -10,20 +10,20 @@ import {
   assertEditable,
   deriveState,
   loadSession,
-  readDisk,
-  renderLayout,
-  renderLed,
+  render,
   saveSession,
 } from "./session.ts";
-import type { Disk, Edit, Session } from "./session.ts";
-import { layoutRel, ledRel, parseProfile } from "./source.ts";
-import type { Profile } from "./source.ts";
-import { layerFromName } from "./txt/layout.ts";
-import type { LayerName } from "./txt/layout.ts";
-import { INDICATORS } from "./txt/led.ts";
-import type { Indicator, Rgb } from "./txt/led.ts";
+import type { Edit } from "./session.ts";
+import { KINDS, kindOfName, parseProfile, readDisk, relOf } from "./source.ts";
+import type { Disk, Profile, Source } from "./source.ts";
+import {
+  parseLayerName,
+  parseMacroTokens,
+  parseTapHoldMs,
+} from "./txt/layout.ts";
+import { parseLedColors } from "./txt/led-edit.ts";
+import { parseIndicator } from "./txt/led.ts";
 import { CHORD, resolveSource, vdriveStatus, watch } from "./vdrive.ts";
-import type { Source } from "./vdrive.ts";
 import { view } from "./view.ts";
 import {
   backup,
@@ -96,50 +96,8 @@ function need(flags: Flags, name: keyof Flags): string {
   return v;
 }
 
-function needLayer(flags: Flags): LayerName {
-  const layer = layerFromName(need(flags, "layer"));
-
-  if (!layer) {
-    throw new UsageError("--layer must be one of base kp fn1 fn2 fn3");
-  }
-
-  return layer;
-}
-
-function parseTokens(text: string): string[] {
-  const braced = [...text.matchAll(/\{([^{}]+)\}/g)].map((m) => m[1]!);
-
-  const tokens =
-    braced.length > 0 ? braced : text.split(/[\s,]+/).filter(Boolean);
-
-  if (tokens.length === 0) {
-    throw new UsageError("--tokens needs at least one token");
-  }
-
-  return tokens;
-}
-
-function parseRgb(text: string): Rgb {
-  const parts = text.split(",").map(Number);
-
-  if (
-    parts.length !== 3 ||
-    parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)
-  ) {
-    throw new UsageError(`--rgb expects R,G,B in 0..255, got ${text}`);
-  }
-
-  return parts as Rgb;
-}
-
-function parseIndicator(text: string): Indicator {
-  const upper = text.toUpperCase() as Indicator;
-
-  if (!INDICATORS.includes(upper)) {
-    throw new UsageError("--indicator must be IND1..IND6");
-  }
-
-  return upper;
+function needLayer(flags: Flags) {
+  return parseLayerName(need(flags, "layer"));
 }
 
 async function sourceOrNull(deps: Deps, flags: Flags): Promise<Source | null> {
@@ -176,10 +134,10 @@ async function sessionStatus(
     state,
     source,
     layout: session?.layout
-      ? { edits: session.layout.edits, renders: layoutRel(profile) }
+      ? { edits: session.layout.edits, renders: relOf("layout", profile) }
       : null,
     led: session?.led
-      ? { edits: session.led.edits, renders: ledRel(profile) }
+      ? { edits: session.led.edits, renders: relOf("led", profile) }
       : null,
   };
 }
@@ -211,13 +169,7 @@ function sessionEdit(op: string, flags: Flags): Edit {
           action: need(flags, "action"),
         },
       };
-    case "set-taphold": {
-      const ms = Number(need(flags, "ms"));
-
-      if (!Number.isInteger(ms) || ms < 1 || ms > 999) {
-        throw new UsageError("--ms must be 1..999");
-      }
-
+    case "set-taphold":
       return {
         kind: "layout",
         edit: {
@@ -225,11 +177,10 @@ function sessionEdit(op: string, flags: Flags): Edit {
           layer: needLayer(flags),
           position: need(flags, "pos"),
           tap: need(flags, "tap"),
-          ms,
+          ms: parseTapHoldMs(need(flags, "ms")),
           hold: need(flags, "hold"),
         },
       };
-    }
 
     case "set-macro":
       return {
@@ -239,7 +190,7 @@ function sessionEdit(op: string, flags: Flags): Edit {
           layer: needLayer(flags),
           trigger: need(flags, "trigger"),
           cotrigger: flags.cotrigger ?? null,
-          tokens: parseTokens(need(flags, "tokens")),
+          tokens: parseMacroTokens(need(flags, "tokens")),
         },
       };
     case "remove":
@@ -261,20 +212,6 @@ function sessionEdit(op: string, flags: Flags): Edit {
       };
     case "set-led": {
       const func = need(flags, "func").toLowerCase();
-      const colors: Record<string, Rgb> = {};
-
-      for (const spec of flags.rgb ?? []) {
-        const eq = spec.indexOf("=");
-        colors[eq === -1 ? func : spec.slice(0, eq).toLowerCase()] = parseRgb(
-          eq === -1 ? spec : spec.slice(eq + 1),
-        );
-      }
-
-      if (Object.keys(colors).length === 0) {
-        throw new UsageError(
-          "--rgb is required (R,G,B, or layd=R,G,B ... for --func layer)",
-        );
-      }
 
       return {
         kind: "led",
@@ -282,7 +219,7 @@ function sessionEdit(op: string, flags: Flags): Edit {
           op: "set-led",
           indicator: parseIndicator(need(flags, "indicator")),
           function: func,
-          colors,
+          colors: parseLedColors(flags.rgb ?? [], func),
         },
       };
     }
@@ -314,9 +251,7 @@ async function sessionVerb(
         throw new CliError("file-missing", `${from} does not exist`);
       }
 
-      const kind =
-        flags.kind ??
-        (from.replace(/^.*\//, "").startsWith("led") ? "led" : "layout");
+      const kind = flags.kind ?? kindOfName(from);
 
       if (kind !== "layout" && kind !== "led") {
         throw new UsageError("--kind must be layout or led");
@@ -346,23 +281,21 @@ async function diffVerb(deps: Deps, flags: Flags): Promise<unknown> {
   const state = deriveState(session, await loadRecord(deps.stateDir), disk);
   const files: { rel: string; diff: string }[] = [];
 
-  const add = async (
-    rel: string,
-    part: Session["layout"] | Session["led"],
-    rendered: string | null,
-  ) => {
+  for (const kind of KINDS) {
+    const part = session[kind];
+    const rendered = render(session, kind);
+
     if (!part || rendered === null) {
-      return;
+      continue;
     }
+
+    const rel = relOf(kind, profile);
 
     files.push({
       rel,
       diff: await diffFiles(deps.stateDir, rel, part.baseText, rendered),
     });
-  };
-
-  await add(layoutRel(profile), session.layout, renderLayout(session));
-  await add(ledRel(profile), session.led, renderLed(session));
+  }
 
   return { profile, state, files };
 }

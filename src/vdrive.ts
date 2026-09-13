@@ -3,6 +3,7 @@ import type { Deps, Observation } from "./deps.ts";
 import { CliError } from "./errors.ts";
 import { parseSettings } from "./settings.ts";
 import { readText, SETTINGS_REL } from "./source.ts";
+import type { Source } from "./source.ts";
 import { loadRecord } from "./write.ts";
 import type { WriteRecord } from "./write.ts";
 
@@ -30,9 +31,6 @@ export function observe(o: Observation): VDrive {
     ? { state: "mounted", mount: dev.mountpoint, device: dev.path }
     : { state: "ejected", device: dev.path };
 }
-
-// --source DIR stands for a mounted volume with no device: nothing to eject, by type.
-export type Source = { dir: string; device: string | null };
 
 // ADV360_SOURCE plays --source for every verb: the GUI and the tests run against a copy.
 export async function resolveSource(

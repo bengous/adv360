@@ -1,19 +1,21 @@
 import { describe, expect, test } from "bun:test";
 
-import { addEdit, deriveState, renderLayout, renderLed } from "./session.ts";
+import { addEdit, deriveState, render } from "./session.ts";
 import type { Session } from "./session.ts";
+import { applyLayoutEdit, LayerMissing } from "./txt/layout-edit.ts";
 import {
-  applyLayoutEdit,
-  LayerMissing,
   parseLayout,
+  parseMacroTokens,
+  parseTapHoldMs,
   serializeLayout,
 } from "./txt/layout.ts";
-import { applyLedEdit, parseLed, serializeLed } from "./txt/led.ts";
+import { applyLedEdit } from "./txt/led-edit.ts";
+import { parseLed, parseRgb, serializeLed } from "./txt/led.ts";
 
 const EMPTY =
   "<base>\r\n\r\n<keypad>\r\n\r\n<function1>\r\n\r\n<function2>\r\n\r\n<function3>\r\n";
 
-const render = (
+const edited = (
   text: string,
   ...edits: Parameters<typeof applyLayoutEdit>[1][]
 ) => serializeLayout(edits.reduce(applyLayoutEdit, parseLayout(text)));
@@ -21,7 +23,7 @@ const render = (
 describe("layout edits", () => {
   test("a new remap lands after the layer's last non-blank line, with the file's EOL", () => {
     expect(
-      render(EMPTY, {
+      edited(EMPTY, {
         op: "set-remap",
         layer: "base",
         position: "caps",
@@ -31,7 +33,7 @@ describe("layout edits", () => {
       "<base>\r\n[caps]>[esc]\r\n\r\n<keypad>\r\n\r\n<function1>\r\n\r\n<function2>\r\n\r\n<function3>\r\n",
     );
     expect(
-      render(EMPTY, {
+      edited(EMPTY, {
         op: "set-remap",
         layer: "function3",
         position: "a",
@@ -39,7 +41,7 @@ describe("layout edits", () => {
       }),
     ).toEndWith("<function3>\r\n[a]>[b]\r\n");
     expect(
-      render("<base>", {
+      edited("<base>", {
         op: "set-remap",
         layer: "base",
         position: "a",
@@ -53,7 +55,7 @@ describe("layout edits", () => {
       "<base>\r\n[caps]>[esc]\n[q]>[w]\r\n[CAPS]>[tab]\n<keypad>\r\n[caps]>[x]\r\n";
 
     expect(
-      render(text, {
+      edited(text, {
         op: "set-remap",
         layer: "base",
         position: "caps",
@@ -63,12 +65,12 @@ describe("layout edits", () => {
       "<base>\r\n[caps]>[esc]\n[q]>[w]\r\n[caps]>[ent]\n<keypad>\r\n[caps]>[x]\r\n",
     );
     expect(
-      render(text, {
+      edited(text, {
         op: "set-taphold",
         layer: "keypad",
         position: "caps",
         tap: "caps",
-        ms: 50,
+        ms: parseTapHoldMs("50"),
         hold: "esc",
       }),
     ).toEndWith("<keypad>\r\n[caps]>[caps][t&h050][esc]\r\n");
@@ -79,12 +81,12 @@ describe("layout edits", () => {
       "<base>\r\n[caps]>[esc]\r\n{lctr}{hk3}>{a}\r\n{hk3}>{b}\r\n[caps]>[tab]\r\n<keypad>\r\n[caps]>[x]\r\n";
 
     expect(
-      render(text, { op: "remove", layer: "base", position: "CAPS" }),
+      edited(text, { op: "remove", layer: "base", position: "CAPS" }),
     ).toBe(
       "<base>\r\n{lctr}{hk3}>{a}\r\n{hk3}>{b}\r\n<keypad>\r\n[caps]>[x]\r\n",
     );
     expect(
-      render(text, {
+      edited(text, {
         op: "remove-macro",
         layer: "base",
         trigger: "hk3",
@@ -92,19 +94,19 @@ describe("layout edits", () => {
       }),
     ).not.toContain("{lctr}{hk3}");
     expect(
-      render(text, {
+      edited(text, {
         op: "set-macro",
         layer: "base",
         trigger: "hk3",
         cotrigger: "lctr",
-        tokens: ["s9", "-lshf", "h", "+lshf"],
+        tokens: parseMacroTokens("{s9}{-lshf}{h}{+lshf}"),
       }),
     ).toContain("{lctr}{hk3}>{s9}{-lshf}{h}{+lshf}\r\n{hk3}>{b}");
   });
 
   test("a missing layer header is an error, never repaired; replace-file ignores the base", () => {
     expect(() =>
-      render("<base>\r\n", {
+      edited("<base>\r\n", {
         op: "set-remap",
         layer: "keypad",
         position: "a",
@@ -112,7 +114,7 @@ describe("layout edits", () => {
       }),
     ).toThrow(LayerMissing);
     expect(
-      render("<base>\r\n", { op: "replace-file", text: "<keypad>\n" }),
+      edited("<base>\r\n", { op: "replace-file", text: "<keypad>\n" }),
     ).toBe("<keypad>\n");
   });
 });
@@ -126,7 +128,7 @@ describe("led edits", () => {
       op: "set-led",
       indicator: "IND3",
       function: "prof",
-      colors: { prof: [1, 2, 3] },
+      colors: { prof: parseRgb("1,2,3") },
     });
 
     expect(serializeLed(one)).toBe(
@@ -137,7 +139,7 @@ describe("led edits", () => {
       op: "set-led",
       indicator: "IND6",
       function: "layer",
-      colors: { lay1: [4, 5, 6], layd: [0, 0, 0] },
+      colors: { lay1: parseRgb("4,5,6"), layd: parseRgb("0,0,0") },
     });
 
     expect(serializeLed(layer)).toEndWith(
@@ -165,8 +167,8 @@ describe("session model", () => {
     );
 
     expect(session.layout?.baseText).toBe(EMPTY);
-    expect(renderLayout(session)).toContain("[caps]>[esc]");
-    expect(renderLed(session)).toBeNull();
+    expect(render(session, "layout")).toContain("[caps]>[esc]");
+    expect(render(session, "led")).toBeNull();
     expect(deriveState(null, null, disk)).toBe("clean");
     expect(deriveState(session, null, disk)).toBe("dirty");
     expect(deriveState(session, null, null)).toBe("dirty");

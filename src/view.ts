@@ -1,13 +1,16 @@
 import keyboard from "../data/keyboard.json";
 import tokens from "../data/tokens.json";
-import { renderLayout, renderLed } from "./session.ts";
+import { render } from "./session.ts";
 import type { Session } from "./session.ts";
-import { layoutRel, ledRel, readText } from "./source.ts";
+import { readText, relOf } from "./source.ts";
 import type { Profile } from "./source.ts";
-import { effectiveLayer, parseLayout } from "./txt/layout.ts";
-import type { LayerName } from "./txt/layout.ts";
-import { effectiveLeds, parseLed } from "./txt/led.ts";
-import type { EffectiveIndicator, Indicator } from "./txt/led.ts";
+import { effectiveLayer } from "./txt/layout-view.ts";
+import { parseLayout } from "./txt/layout.ts";
+import type { LayerName, MacroTokens, TapHoldMs } from "./txt/layout.ts";
+import { effectiveLeds } from "./txt/led-edit.ts";
+import type { EffectiveIndicator } from "./txt/led-edit.ts";
+import { parseLed } from "./txt/led.ts";
+import type { Indicator } from "./txt/led.ts";
 
 const LABELS = new Map<string, string>();
 
@@ -33,7 +36,7 @@ export function defaultAction(
 
 export type ViewMacro = {
   cotrigger: string | null;
-  tokens: string[];
+  tokens: MacroTokens;
   line: number;
 };
 
@@ -57,7 +60,7 @@ export type ViewKey =
       position: string;
       kind: "taphold";
       tap: string;
-      ms: number;
+      ms: TapHoldMs;
       hold: string;
       label: string;
       line: number;
@@ -132,10 +135,10 @@ export async function view(
   layer: LayerName,
   session: Session | null = null,
 ): Promise<ViewReport> {
-  const layoutText = await readText(source, layoutRel(profile));
-  const ledText = await readText(source, ledRel(profile));
+  const layoutText = await readText(source, relOf("layout", profile));
+  const ledText = await readText(source, relOf("led", profile));
   const onDisk = layerKeys(layoutText ?? "", layer);
-  const rendered = session ? renderLayout(session) : null;
+  const rendered = session ? render(session, "layout") : null;
   const shown = rendered === null ? onDisk : layerKeys(rendered, layer);
 
   const keys = shown.map((key, i) => ({
@@ -143,13 +146,13 @@ export async function view(
     pending: JSON.stringify(key) !== JSON.stringify(onDisk[i]),
   }));
 
-  const ledShown = session ? renderLed(session) : null;
+  const ledShown = session ? render(session, "led") : null;
   const leds = ledShown ?? ledText;
 
   return {
     profile,
     layer,
-    layout: layoutText === null ? null : layoutRel(profile),
+    layout: layoutText === null ? null : relOf("layout", profile),
     keys,
     leds: leds === null ? null : effectiveLeds(parseLed(leds)),
     session: session !== null,

@@ -2,7 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 
-import { effectiveLeds, parseLed, parseLedEntry, serializeLed } from "./led.ts";
+import { UsageError } from "../errors.ts";
+import { effectiveLeds } from "./led-edit.ts";
+import {
+  parseIndicator,
+  parseLed,
+  parseLedEntry,
+  parseRgb,
+  serializeLed,
+} from "./led.ts";
 
 const REAL = join(import.meta.dir, "../../tests/fixtures/real/lighting");
 
@@ -31,7 +39,7 @@ describe("led files", () => {
       kind: "led",
       indicator: "IND2",
       func: "prof",
-      rgb: [255, 0, 7],
+      rgb: parseRgb("255,0,7"),
     });
     expect(parseLedEntry("*[IND1]>[caps][1][2][3]")).toMatchObject({
       kind: "disabled",
@@ -47,7 +55,7 @@ describe("led files", () => {
     const leds = effectiveLeds(parseLed(text));
     expect(leds.IND1).toEqual({
       function: "caps",
-      colors: { caps: [255, 255, 255] },
+      colors: { caps: parseRgb("255,255,255") },
       lines: [1],
     });
     expect(leds.IND3.function).toBe("layer");
@@ -65,13 +73,49 @@ describe("led files", () => {
 
     expect(overridden.IND1).toEqual({
       function: "null",
-      colors: { null: [0, 0, 0] },
+      colors: { null: parseRgb("0,0,0") },
       lines: [2],
     });
     expect(effectiveLeds(parseLed("")).IND6).toEqual({
       function: "null",
       colors: {},
       lines: [],
+    });
+  });
+});
+
+describe("led value parsers", () => {
+  test.each([
+    ["ind1", "IND1"],
+    ["IND6", "IND6"],
+  ])("given %s, when parsing an indicator, then it is %s", (text, ind) => {
+    expect<string>(parseIndicator(text)).toBe(ind);
+  });
+
+  test.each(["ind0", "ind7", "", "led1"])(
+    "given %j, when parsing an indicator, then it is a usage error",
+    (text) => {
+      expect(() => parseIndicator(text)).toThrow(UsageError);
+    },
+  );
+
+  test.each([
+    ["0,0,0", [0, 0, 0]],
+    ["255,128,1", [255, 128, 1]],
+  ])("given %s, when parsing an rgb, then it is %j", (text, rgb) => {
+    expect<readonly number[]>(parseRgb(text)).toEqual(rgb);
+  });
+
+  test.each(["256,0,0", "-1,0,0", "1,2", "1,2,3,4", "a,b,c", "1.5,0,0", ""])(
+    "given %j, when parsing an rgb, then it is a usage error",
+    (text) => {
+      expect(() => parseRgb(text)).toThrow(UsageError);
+    },
+  );
+
+  test("given a component above 255 in a file, when parsing the entry, then it is unparsed", () => {
+    expect(parseLedEntry("[IND1]>[caps][300][0][0]")).toEqual({
+      kind: "unparsed",
     });
   });
 });

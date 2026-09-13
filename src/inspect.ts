@@ -1,10 +1,9 @@
 import { parseSettings } from "./settings.ts";
 import {
-  layoutRel,
-  ledRel,
   listNamedBackups,
   PROFILES,
   readText,
+  relOf,
   SETTINGS_REL,
 } from "./source.ts";
 import type { Profile } from "./source.ts";
@@ -144,15 +143,14 @@ export async function inspect(
   const profiles = [];
 
   for (const profile of only ? [only] : PROFILES) {
-    const layoutText = await readText(source, layoutRel(profile));
-    const ledText = await readText(source, ledRel(profile));
+    const layoutFile = relOf("layout", profile);
+    const ledFile = relOf("led", profile);
+    const layoutText = await readText(source, layoutFile);
+    const ledText = await readText(source, ledFile);
     profiles.push({
       profile,
-      layout:
-        layoutText === null
-          ? null
-          : layoutReport(layoutRel(profile), layoutText),
-      led: ledText === null ? null : ledReport(ledRel(profile), ledText),
+      layout: layoutText === null ? null : layoutReport(layoutFile, layoutText),
+      led: ledText === null ? null : ledReport(ledFile, ledText),
     });
   }
 

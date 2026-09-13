@@ -2,10 +2,14 @@ import { describe, expect, test } from "bun:test";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 
+import { UsageError } from "../errors.ts";
+import { effectiveLayer } from "./layout-view.ts";
 import {
-  effectiveLayer,
   parseEntry,
+  parseLayerName,
   parseLayout,
+  parseMacroTokens,
+  parseTapHoldMs,
   serializeLayout,
 } from "./layout.ts";
 
@@ -44,7 +48,7 @@ describe("layout grammar", () => {
       kind: "taphold",
       position: "caps",
       tap: "caps",
-      ms: 500,
+      ms: parseTapHoldMs("500"),
       hold: "esc",
     });
     expect(
@@ -53,13 +57,13 @@ describe("layout grammar", () => {
       kind: "macro",
       trigger: "hk3",
       cotrigger: "lctr",
-      tokens: ["s5", "x1", "d125", "dran", "-lshf", "F6", "+lshf"],
+      tokens: parseMacroTokens("{s5}{x1}{d125}{dran}{-lshf}{F6}{+lshf}"),
     });
     expect(parseEntry("{tab}>{h}{i}")).toEqual({
       kind: "macro",
       trigger: "tab",
       cotrigger: null,
-      tokens: ["h", "i"],
+      tokens: parseMacroTokens("{h}{i}"),
     });
   });
 
@@ -113,5 +117,57 @@ describe("effective layer", () => {
     const base = effectiveLayer(layout, "base");
     expect([...base.macros.keys()].toSorted()).toEqual(["hk3+", "hk3+lctr"]);
     expect(base.macros.get("hk3+lctr")?.line).toBe(6);
+  });
+});
+
+describe("layout value parsers", () => {
+  test.each([
+    ["kp", "keypad"],
+    ["FN3", "function3"],
+    ["base", "base"],
+  ])("given %s, when parsing a layer name, then it is %s", (text, layer) => {
+    expect<string>(parseLayerName(text)).toBe(layer);
+  });
+
+  test.each(["", "fn4", "layer9"])(
+    "given %j, when parsing a layer name, then it is a usage error",
+    (text) => {
+      expect(() => parseLayerName(text)).toThrow(UsageError);
+    },
+  );
+
+  test.each(["1", "999", "150"])(
+    "given %s, when parsing a tap-hold delay, then it is accepted",
+    (text) => {
+      expect<number>(parseTapHoldMs(text)).toBe(Number(text));
+    },
+  );
+
+  test.each(["0", "1000", "1.5", "abc", ""])(
+    "given %j, when parsing a tap-hold delay, then it is a usage error",
+    (text) => {
+      expect(() => parseTapHoldMs(text)).toThrow(UsageError);
+    },
+  );
+
+  test.each([
+    ["{a}{b}", ["a", "b"]],
+    ["{s5} {x1}", ["s5", "x1"]],
+    ["a b,c", ["a", "b", "c"]],
+  ])("given %j, when parsing macro tokens, then it is %j", (text, tokens) => {
+    expect<readonly string[]>(parseMacroTokens(text)).toEqual(tokens);
+  });
+
+  test.each(["", " , "])(
+    "given %j, when parsing macro tokens, then it is a usage error",
+    (text) => {
+      expect(() => parseMacroTokens(text)).toThrow(UsageError);
+    },
+  );
+
+  test("given a tap-hold delay outside 1..999 in a file, when parsing the entry, then it is unparsed", () => {
+    expect(parseEntry("[caps]>[caps][t&h000][esc]")).toEqual({
+      kind: "unparsed",
+    });
   });
 });

@@ -8,16 +8,13 @@ import {
   assertEditable,
   deriveState,
   loadSession,
-  readDisk,
-  renderLayout,
-  renderLed,
+  render,
   saveSession,
 } from "./session.ts";
 import type { Session } from "./session.ts";
-import { layoutRel, ledRel, readText } from "./source.ts";
-import type { Profile } from "./source.ts";
+import { KINDS, kindOfName, readDisk, readText, relOf } from "./source.ts";
+import type { Profile, Source } from "./source.ts";
 import { CHORD } from "./vdrive.ts";
-import type { Source } from "./vdrive.ts";
 
 export type WritePhase =
   | { kind: "writing" }
@@ -247,26 +244,22 @@ export async function planApply(
 
   const files: PlannedFile[] = [];
 
-  const planned = (
-    rel: string,
-    before: string | null,
-    content: string | null,
-  ) => {
+  for (const kind of KINDS) {
+    const before = disk[kind];
+    const content = render(session, kind);
+
     if (content === null || content === before) {
-      return;
+      continue;
     }
 
     files.push({
-      rel,
+      rel: relOf(kind, profile),
       before: before === null ? null : sha256(before),
       after: sha256(content),
       bytes: Buffer.byteLength(content),
       content,
     });
-  };
-
-  planned(layoutRel(profile), disk.layout, renderLayout(session));
-  planned(ledRel(profile), disk.led, renderLed(session));
+  }
 
   if (files.length === 0) {
     throw new CliError(
@@ -474,7 +467,7 @@ export async function verify(
     (f) => f.actual === f.expected,
   )
     ? "verified"
-    : files.every((f, i) => f.actual === record.files[i]!.before)
+    : files.every((f, i) => f.actual === record.files[i]?.before)
       ? "unchanged"
       : "mismatch";
 
@@ -550,7 +543,7 @@ export async function restoreSession(
 
   const candidates = stat
     ? [from]
-    : [join(from, layoutRel(profile)), join(from, ledRel(profile))];
+    : KINDS.map((kind) => join(from, relOf(kind, profile)));
 
   let restored: Session | null = null;
 
@@ -562,11 +555,10 @@ export async function restoreSession(
     }
 
     const text = await file.text();
-    const kind = basename(path).startsWith("led") ? "led" : "layout";
     restored = addEdit(
       restored ?? session,
       profile,
-      { kind, edit: { op: "replace-file", text } },
+      { kind: kindOfName(path), edit: { op: "replace-file", text } },
       disk,
     );
   }
