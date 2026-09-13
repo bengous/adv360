@@ -1,0 +1,15 @@
+{
+  "name": "kinesis-smartset-arch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit && bun test && [ \"$(jq -r .version manifest.json)\" = \"$(jq -r .version package.json)\" ]",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.0",
+    "typescript": "7.0.2"
+  }
+}
