@@ -16,8 +16,10 @@ export type Observation = { devices: BlockDevice[] };
 
 export type Urgency = "low" | "normal" | "critical";
 
+// The ports: everything the use cases need from the machine, faked in deps-fake.ts.
 export type Deps = {
   stateDir: string;
+  sourceEnv: string | null;
   observe(): Promise<Observation>;
   unmount(device: string): Promise<void>;
   notify(
@@ -26,6 +28,9 @@ export type Deps = {
     urgency: Urgency,
   ): Promise<void>;
   now(): Date;
+  sleep(ms: number): Promise<void>;
+  emit(line: string): void;
+  warn(line: string): void;
 };
 
 const SPAWN_TIMEOUT_MS = 10_000;
@@ -76,40 +81,47 @@ export function defaultStateDir(): string {
   );
 }
 
+async function observe(): Promise<Observation> {
+  const r = await runCommand(
+    ["lsblk", "-J", "-o", "PATH,LABEL,MOUNTPOINT"],
+    "lsblk-missing",
+  );
+
+  if (r.code !== 0) {
+    throw new CliError("lsblk-failed", r.stderr.trim());
+  }
+
+  const devices = field(
+    decodeObject(r.stdout, "lsblk"),
+    "blockdevices",
+    isArray,
+    "lsblk",
+  );
+
+  return { devices: devices.map(parseBlockDevice) };
+}
+
+async function unmount(device: string): Promise<void> {
+  const r = await runCommand(
+    ["udisksctl", "unmount", "-b", device],
+    "udisksctl-missing",
+  );
+
+  if (r.code !== 0) {
+    throw new CliError("eject-failed", r.stderr.trim() || r.stdout.trim(), {
+      device,
+    });
+  }
+}
+
 export function realDeps(): Deps {
+  const warn = (line: string) => console.error(line);
+
   return {
     stateDir: defaultStateDir(),
-    async observe() {
-      const r = await runCommand(
-        ["lsblk", "-J", "-o", "PATH,LABEL,MOUNTPOINT"],
-        "lsblk-missing",
-      );
-
-      if (r.code !== 0) {
-        throw new CliError("lsblk-failed", r.stderr.trim());
-      }
-
-      const devices = field(
-        decodeObject(r.stdout, "lsblk"),
-        "blockdevices",
-        isArray,
-        "lsblk",
-      );
-
-      return { devices: devices.map(parseBlockDevice) };
-    },
-    async unmount(device) {
-      const r = await runCommand(
-        ["udisksctl", "unmount", "-b", device],
-        "udisksctl-missing",
-      );
-
-      if (r.code !== 0) {
-        throw new CliError("eject-failed", r.stderr.trim() || r.stdout.trim(), {
-          device,
-        });
-      }
-    },
+    sourceEnv: process.env["ADV360_SOURCE"] ?? null,
+    observe,
+    unmount,
     async notify(headline, description, urgency) {
       try {
         await runCommand(
@@ -126,61 +138,14 @@ export function realDeps(): Deps {
         );
       } catch (error) {
         // A missing notifier must never fail a write cycle.
-        console.error(
+        warn(
           `adv360: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     },
     now: () => new Date(),
+    sleep: (ms) => Bun.sleep(ms),
+    emit: (line) => console.log(line),
+    warn,
   };
-}
-
-export type FakeDeps = Deps & {
-  devices: BlockDevice[];
-  unmounted: string[];
-  notifications: { headline: string; description: string; urgency: Urgency }[];
-  failUnmount: boolean;
-};
-
-export function fakeDeps(
-  stateDir: string,
-  devices: BlockDevice[] = [],
-): FakeDeps {
-  const fake: FakeDeps = {
-    stateDir,
-    devices,
-    unmounted: [],
-    notifications: [],
-    failUnmount: false,
-    observe() {
-      return Promise.resolve({
-        devices: fake.devices.map((d) => ({ ...d })),
-      });
-    },
-    unmount(device) {
-      if (fake.failUnmount) {
-        return Promise.reject(
-          new CliError("eject-failed", "fake udisksctl refused", { device }),
-        );
-      }
-
-      fake.unmounted.push(device);
-
-      for (const d of fake.devices) {
-        if (d.path === device) {
-          d.mountpoint = null;
-        }
-      }
-
-      return Promise.resolve();
-    },
-    notify(headline, description, urgency) {
-      fake.notifications.push({ headline, description, urgency });
-
-      return Promise.resolve();
-    },
-    now: () => new Date("2026-09-13T12:00:00Z"),
-  };
-
-  return fake;
 }

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { executePlan } from "./apply.ts";
-import { fakeDeps } from "./deps.ts";
-import type { FakeDeps } from "./deps.ts";
+import { fakeDeps } from "./deps-fake.ts";
+import type { FakeDeps } from "./deps-fake.ts";
 import { readDisk, sha256 } from "./disk.ts";
 import { run } from "./main.ts";
 import { decideApply } from "./plan.ts";
@@ -19,8 +19,6 @@ let mount: string;
 
 let deps: FakeDeps;
 
-let out: string[];
-
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "adv360-"));
   mount = join(root, "ADV360");
@@ -28,8 +26,6 @@ beforeEach(async () => {
   deps = fakeDeps(join(root, "state"), [
     { path: "/dev/fake", label: "ADV360", mountpoint: mount },
   ]);
-  out = [];
-  console.log = (line: string) => void out.push(line);
 });
 
 const adv = async (
@@ -37,7 +33,7 @@ const adv = async (
 ): Promise<{ code: number; last: Record<string, unknown> }> => {
   const code = await run(argv, deps);
 
-  return { code, last: JSON.parse(out.at(-1)!) };
+  return { code, last: JSON.parse(deps.lines.at(-1)!) };
 };
 
 const text = (rel: string) => Bun.file(join(mount, rel)).text();
@@ -70,7 +66,7 @@ describe("apply cycle on a fake v-Drive", () => {
 
     const dry = await adv("apply", "--profile", "9", "--dry-run");
     expect(dry.last).toEqual({ event: "dry-run", profile: 9 });
-    expect(JSON.parse(out.at(-2)!)).toMatchObject({
+    expect(JSON.parse(deps.lines.at(-2)!)).toMatchObject({
       event: "plan",
       eject: "/dev/fake",
       files: [{ rel: "layouts/layout9.txt", creates: false }],
@@ -213,7 +209,7 @@ describe("apply cycle on a fake v-Drive", () => {
       event: "applied",
       outcome: { kind: "ejected" },
     });
-    expect(JSON.parse(out.at(-2)!)["event"]).toBe("retry-eject");
+    expect(JSON.parse(deps.lines.at(-2)!)["event"]).toBe("retry-eject");
   });
 
   test("under --source there is no eject: the write is verified by read-back and the session closes", async () => {

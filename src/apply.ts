@@ -36,14 +36,12 @@ export async function applyVerb(
   );
 
   if (decision.kind === "retry-eject") {
-    console.log(
-      JSON.stringify({ event: "retry-eject", device: source.device }),
-    );
+    deps.emit(JSON.stringify({ event: "retry-eject", device: source.device }));
 
     return ejectAfterWrite(deps, decision.record);
   }
 
-  console.log(JSON.stringify(describePlan(decision.plan)));
+  deps.emit(JSON.stringify(describePlan(decision.plan)));
 
   if (dryRun) {
     return { event: "dry-run", profile };

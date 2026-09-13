@@ -24,9 +24,9 @@ export async function observeVDrive(
   deps: Deps,
   sourceFlag: string | undefined,
 ): Promise<VDrive> {
-  const dir = sourceFlag ?? process.env["ADV360_SOURCE"];
+  const dir = sourceFlag ?? deps.sourceEnv;
 
-  return dir !== undefined && dir !== ""
+  return dir !== null && dir !== ""
     ? mountedAt(dir)
     : observe(await deps.observe());
 }
@@ -57,11 +57,7 @@ export async function vdriveStatus(deps: Deps): Promise<VDriveStatus> {
   return statusOf(observed, record, settingsText, deps.stateDir);
 }
 
-export async function watch(
-  deps: Deps,
-  emit: (status: VDriveStatus) => void,
-  intervalMs = 1000,
-): Promise<never> {
+export async function watch(deps: Deps, intervalMs = 1000): Promise<never> {
   let prev: VDrive | null = null;
 
   for (;;) {
@@ -69,7 +65,7 @@ export async function watch(
     const step = watchStep(prev, status.observed);
 
     if (step.changed) {
-      emit(status);
+      deps.emit(JSON.stringify(status));
     }
 
     if (step.notify) {
@@ -81,7 +77,7 @@ export async function watch(
     }
 
     prev = status.observed;
-    await Bun.sleep(intervalMs);
+    await deps.sleep(intervalMs);
   }
 }
 

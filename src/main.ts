@@ -222,7 +222,7 @@ function handlers(deps: Deps): Record<string, Handler> {
     "vdrive status": () => vdriveStatus(deps),
     "vdrive eject": () => eject(deps),
     gui: () => launchGui(),
-    watch: () => watch(deps, (status) => console.log(JSON.stringify(status))),
+    watch: () => watch(deps),
     inspect: async (flags) =>
       inspect(
         (await findSource(deps, flags.source)).dir,
@@ -296,12 +296,12 @@ export async function run(
       );
     }
 
-    console.log(JSON.stringify(await handler(values, positionals)));
+    deps.emit(JSON.stringify(await handler(values, positionals)));
 
     return 0;
   } catch (error) {
     if (error instanceof CliError) {
-      console.log(JSON.stringify(error));
+      deps.emit(JSON.stringify(error));
 
       return 1;
     }
@@ -311,7 +311,7 @@ export async function run(
       (error instanceof TypeError &&
         /^(Unknown option|Option)/.test(error.message))
     ) {
-      console.error(`adv360: ${error.message}\n${USAGE}`);
+      deps.warn(`adv360: ${error.message}\n${USAGE}`);
 
       return 2;
     }
