@@ -40,4 +40,5 @@ Native Omarchy editor for the Kinesis Advantage360 (SmartSet engine) v-Drive: on
 - Comments only for an irreplaceable why (external constraint, workaround, contract policy).
 - Real fixtures under `tests/fixtures/real/` are byte-for-byte copies of the keyboard, never edited.
 - QML: the adv360 palette (`gui/theme/Theme.qml`) and controls (`gui/controls/`), never Omarchy's `qs.Commons` or `qs.Ui`; one component per file; the GUI never touches files.
+- GUI: `gui/shell.qml` holds the state and every action; views bind to it, and clicks and the `adv360` IPC target call the same functions. Pure logic lives in `gui/*.mjs` with a `bun test` file beside it; the QML engine imports these modules as they are, so no object spread, `at()`, `flat()`, `flatMap()`, `toSorted()` or `replaceAll()`.
 - Commits: English, imperative, scoped by phase.

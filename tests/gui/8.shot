@@ -1,0 +1,14 @@
+# Slice 8: the top bar with the LED dot of each layer, the backups menu with readable dates.
+cli backup
+ipc select caps
+ipc assign esc
+ipc drawer none
+shot final
+expect state-final.json .pending == 1 and .drawer == "none"
+ipc menu backups
+shot backups
+ipc menu profiles
+shot profiles
+ipc menu none
+ipc layer function2
+shot fn2

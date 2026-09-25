@@ -88,7 +88,7 @@ Validated on a real Advantage360 (firmware 1.0.69) on 2026-09-13: a remap writte
 
 ## Development
 
-`bun run check` (format, lint, import direction between `src/model`, `src/io`, `src/app` and `src/cli`, typecheck, tests, qmllint, shellcheck, version match). Real keyboard files under `tests/fixtures/real/` are byte-for-byte copies and never change. Vocabulary in `CONTEXT.md`, rules in `AGENTS.md`.
+`bun run check` (format, lint, import direction between `src/model`, `src/io`, `src/app` and `src/cli`, typecheck, tests, qmllint, shellcheck, version match). Visual checks never open a window on your workspaces: `tools/gui-shot.sh <out-dir> tests/gui/<n>.shot` draws the GUI on a headless Hyprland output far from your monitors, drives it through its IPC and captures it with `grim`; `tools/gui-shot.sh --teardown` removes that output. Real keyboard files under `tests/fixtures/real/` are byte-for-byte copies and never change. Vocabulary in `CONTEXT.md`, rules in `AGENTS.md`.
 
 ## License
 

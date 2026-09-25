@@ -21,84 +21,55 @@ Item {
 
     TopBar {
       Layout.fillWidth: true
-      Layout.minimumWidth: 0
-      Layout.margins: 16
-      Layout.bottomMargin: 8
-      status: root.app.status
-      profile: root.app.profile
-      layerName: root.app.layerName
-      tab: root.app.mode === "lights" ? "lighting" : "layout"
-      cycle: root.app.cycle
-      onProfileSelected: function(n) { root.app.profile = n }
-      onLayerSelected: function(name) { root.app.layerName = name }
-      onTabSelected: function(name) { root.app.mode = name === "lighting" ? "lights" : "keys" }
-      onBackupRequested: root.app.act(["backup"])
-      onEjectRequested: root.app.act(["vdrive", "eject"])
+      Layout.preferredHeight: 56
+      app: root.app
     }
 
     Text {
       Layout.fillWidth: true
-      Layout.leftMargin: 16
-      visible: text !== ""
-      text: root.app.cliMissing ? "adv360 is not on PATH: run install.sh first" : ""
+      Layout.margins: 16
+      Layout.bottomMargin: 0
+      visible: root.app.cliMissing
+      text: "adv360 is not on PATH: run install.sh first"
       color: Theme.bad
       font.family: Theme.font
       font.pixelSize: 12
-      wrapMode: Text.Wrap
     }
 
-    RowLayout {
+    ColumnLayout {
       Layout.fillWidth: true
       Layout.fillHeight: true
-      Layout.margins: 16
-      Layout.topMargin: 0
-      spacing: 16
+      Layout.margins: 20
+      Layout.topMargin: 8
+      spacing: 14
 
-      ColumnLayout {
+      Keyboard {
+        id: keyboardView
         Layout.fillWidth: true
         Layout.fillHeight: true
-        spacing: 14
+        keyboard: root.app.keyboard
+        tokens: root.app.tokens
+        viewData: root.app.viewData
+        layerName: root.app.layerName
+        selected: root.app.selected
+        targeting: root.app.selected !== ""
+        lights: root.app.mode === "lights"
+        selectedLed: root.app.selectedLed
+        glow: root.app.drawer === "reload" && root.app.cycle.kind === "reload" ? ["smartset", "hk4"] : []
+        ghost: ghost
+        onKeyClicked: function(position) { root.app.keyClicked(position) }
+        onDropped: function(position, payload) { root.app.dropOn(position, payload) }
+        onLedClicked: function(indicator) { root.app.selectLed(indicator) }
+      }
 
-        Keyboard {
-          id: keyboardView
-          Layout.fillWidth: true
-          Layout.fillHeight: true
-          keyboard: root.app.keyboard
-          tokens: root.app.tokens
-          viewData: root.app.viewData
-          layerName: root.app.layerName
-          selected: root.app.selected
-          targeting: root.app.selected !== ""
-          lights: root.app.mode === "lights"
-          selectedLed: root.app.selectedLed
-          glow: root.app.drawer === "reload" && root.app.cycle.kind === "reload" ? ["smartset", "hk4"] : []
-          ghost: ghost
-          onKeyClicked: function(position) { root.app.keyClicked(position) }
-          onDropped: function(position, payload) { root.app.dropOn(position, payload) }
-          onLedClicked: function(indicator) { root.app.selectLed(indicator) }
-        }
-
-        Drawer {
-          id: drawer
-          visible: root.app.drawer !== "none"
-          Layout.fillWidth: true
-          Layout.preferredHeight: ({ one: 232, taphold: 280, macro: 316, review: 330, reload: 150, led: 200 })[root.app.drawer] || 232
-          app: root.app
-          ghost: ghost
-          notchX: keyboardView.x + (root.app.drawer === "led" ? keyboardView.ledCenter(root.app.selectedLed) : keyboardView.centerOf(root.app.selected)).x - x
-        }
-
-        BottomPane {
-          visible: root.app.drawer === "none"
-          Layout.fillWidth: true
-          Layout.fillHeight: false
-          Layout.preferredHeight: 80
-          status: root.app.status
-          backups: root.app.backups
-          profile: root.app.profile
-          onVerifyRequested: root.app.act(["verify"])
-          onRestoreRequested: function(dir) { root.app.act(["restore", dir, "--profile", String(root.app.profile)]) }
-        }
+      Drawer {
+        id: drawer
+        visible: root.app.drawer !== "none"
+        Layout.fillWidth: true
+        Layout.preferredHeight: ({ one: 232, taphold: 280, macro: 316, review: 330, reload: 150, led: 200 })[root.app.drawer] || 232
+        app: root.app
+        ghost: ghost
+        notchX: keyboardView.x + (root.app.drawer === "led" ? keyboardView.ledCenter(root.app.selectedLed) : keyboardView.centerOf(root.app.selected)).x - x
       }
     }
 

@@ -51,6 +51,8 @@ ShellRoot {
   // The layer colour the LED drawer edits; the top bar's layer by default.
   property string ledLayer: "layd"
   property string drawer: "none"
+  // The open menu of the top bar: "", "profiles" or "backups".
+  property string menu: ""
   property bool capturing: false
   // Tap & hold draft: written once both slots hold an action.
   property string slot: "tap"
@@ -622,6 +624,7 @@ ShellRoot {
     function mode(name: string): void { shell.mode = name }
     function select(position: string): void { shell.select(position) }
     function selectLed(indicator: string): void { shell.selectLed(indicator) }
+    function menu(name: string): void { shell.menu = name === "none" ? "" : name }
     function drawer(tab: string): void { shell.setTab(tab) }
     function slot(name: string): void { shell.slot = name }
     function assign(token: string): void { shell.assign(token) }

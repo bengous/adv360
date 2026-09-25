@@ -1,4 +1,4 @@
-# Slice 1: the current screens on the adv360 palette, with no Omarchy import.
+# Slice 1: the keys and lights views on the adv360 palette, with no Omarchy import.
 cli session set-remap --profile 1 --layer base --pos caps --action esc
 shot keys
 ipc mode lights
