@@ -14,7 +14,7 @@ Every verb is `adv360 <verb> [flags]`, prints one JSON value per line on stdout 
 | `verify` | GUI on re-mount, agent | write record + on-disk | `ejected → verified` (record and session cleared) / `unchanged` (record cleared, session kept) / `mismatch` (record `failed`, `corrupt-suspected`) |
 | `backup` | any, and inside `apply` | `layouts/ lighting/ settings/` | copy to `~/.local/state/adv360/backups/<ts>/`; listing is `ls` |
 | `restore <dir-or-file> --profile N` | any | a backup dir or one `.txt` | opens a `replace-file` session; the write goes through `apply` |
-| `gui` | menu, bind | share dir | prepares the Quickshell run dir, execs `quickshell -p` |
+| `gui` | menu, bind | share dir | runs `quickshell -p <share>/gui` |
 | switch profile | **human only** (`SmartSet + <digit>`) | — | the tool shows the active profile and the chord |
 | open / reload / close v-Drive | **human only** (`SmartSet + Hotkey 3` / `Hotkey 4` / `Hotkey 3`) | — | the tool detects and instructs; never mounts |
 

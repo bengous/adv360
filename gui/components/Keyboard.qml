@@ -1,5 +1,5 @@
 import QtQuick
-import qs.Commons
+import "../theme"
 
 // The 77 hit-boxes of the SmartSet App form, scaled to the item's width.
 Item {
@@ -32,15 +32,17 @@ Item {
 
   Rectangle {
     anchors.fill: parent
-    radius: Style.cornerRadius
-    color: Util.alpha(Color.foreground, 0.03)
-    border.color: Util.alpha(Color.foreground, 0.1)
+    radius: 8
+    color: Theme.ground
+    border.color: Theme.line
   }
 
   Repeater {
     model: root.keyboard ? root.keyboard.keys : []
+
     Rectangle {
       id: key
+
       required property var modelData
       readonly property var info: root.byPosition[modelData.position] || null
       readonly property string kind: info ? String(info.kind) : "default"
@@ -53,22 +55,22 @@ Item {
       y: root.oy + modelData.y * root.unit
       width: modelData.w * root.unit
       height: modelData.h * root.unit
-      radius: Style.cornerRadius
-      color: !programmable ? Util.alpha(Color.muted, 0.2)
-        : kind === "remap" ? Util.alpha(Color.accent, 0.35)
-        : kind === "taphold" ? Util.alpha(Color.accent, 0.18)
-        : Util.alpha(Color.foreground, 0.06)
-      border.color: isSelected ? Color.urgent : pending ? Color.foreground : kind === "taphold" ? Color.accent : Util.alpha(Color.foreground, 0.25)
-      border.width: isSelected || pending ? 3 : kind === "taphold" ? 2 : 1
+      radius: 5
+      color: !programmable ? Theme.surface
+        : kind === "remap" ? Theme.tint(Theme.remap, 0.3)
+        : kind === "taphold" ? Theme.tint(Theme.taphold, 0.3)
+        : hasMacro ? Theme.tint(Theme.macro, 0.22)
+        : Theme.cap
+      border.color: isSelected ? Theme.focus : Theme.capBorder
+      border.width: isSelected ? 2 : 1
 
       Text {
         anchors.fill: parent
         anchors.margins: 2
         text: !key.programmable ? "⚙" : (key.info ? String(key.info.label) : String(key.modelData.position))
-        color: key.isSelected ? Color.urgent : Color.foreground
-        font.family: Style.font.family
-        font.pixelSize: Math.max(8, Style.font.caption * root.unit)
-        font.bold: key.kind !== "default"
+        color: Theme.text
+        font.family: Theme.font
+        font.pixelSize: Math.max(8, 11 * root.unit)
         wrapMode: Text.Wrap
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -76,12 +78,13 @@ Item {
       }
 
       Rectangle {
-        visible: key.hasMacro
-        width: 8; height: 8; radius: 4
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.margins: 2
-        color: Color.urgent
+        visible: key.pending
+        width: 6
+        height: 6
+        radius: 3
+        x: 4
+        y: 4
+        color: Theme.pending
       }
 
       MouseArea {
@@ -95,6 +98,7 @@ Item {
 
   Repeater {
     model: root.keyboard ? root.keyboard.leds : []
+
     Rectangle {
       required property var modelData
       x: root.ox + (modelData.x + modelData.w / 2 - modelData.h / 2) * root.unit
@@ -103,18 +107,8 @@ Item {
       height: modelData.h * root.unit
       radius: height / 2
       color: root.ledColor(modelData.indicator)
-      border.color: Util.alpha(Color.foreground, 0.4)
+      border.color: Theme.capBorder
       border.width: 1
     }
-  }
-
-  Text {
-    anchors.left: parent.left
-    anchors.bottom: parent.bottom
-    anchors.margins: Style.spacing.md
-    color: Color.muted
-    font.family: Style.font.family
-    font.pixelSize: Style.font.caption
-    text: "accent = remap · outlined = tap & hold · red dot = macro · thick border = pending edit · red = selected"
   }
 }

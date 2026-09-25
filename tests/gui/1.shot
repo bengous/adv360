@@ -1,0 +1,6 @@
+# Slice 1: the current screens on the adv360 palette, with no Omarchy import.
+cli session set-remap --profile 1 --layer base --pos caps --action esc
+shot keys
+ipc mode lights
+shot lights
+expect state-lights.json .mode == "lights" and .pending == 1

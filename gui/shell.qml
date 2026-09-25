@@ -2,8 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import qs.Commons
-import "."
+import "theme"
 import "components"
 
 ShellRoot {
@@ -43,8 +42,8 @@ ShellRoot {
     return (session.layout ? session.layout.edits.length : 0) + (session.led ? session.led.edits.length : 0)
   }
 
-  FileView { id: keyboardFile; path: Quickshell.shellDir + "/data/keyboard.json"; blockLoading: true }
-  FileView { id: tokensFile; path: Quickshell.shellDir + "/data/tokens.json"; blockLoading: true }
+  FileView { id: keyboardFile; path: Quickshell.shellDir + "/../data/keyboard.json"; blockLoading: true }
+  FileView { id: tokensFile; path: Quickshell.shellDir + "/../data/tokens.json"; blockLoading: true }
 
   onProfileChanged: { selected = ""; refresh() }
   onLayerNameChanged: refresh()
@@ -168,6 +167,7 @@ ShellRoot {
 
     function profile(n: int): void { shell.profile = n }
     function layer(name: string): void { shell.layerName = name }
+    function mode(name: string): void { shell.tab = name === "lights" ? "lighting" : "layout" }
     function state(): string { return JSON.stringify(shell.snapshot()) }
   }
 
@@ -176,13 +176,13 @@ ShellRoot {
 
     FloatingWindow {
       title: "Kinesis Advantage360"
-      color: Color.background
+      color: Theme.surface
       implicitWidth: 1320
       implicitHeight: 860
 
       Editor {
         anchors.fill: parent
-        anchors.margins: Style.spacing.panelPadding
+        anchors.margins: 16
         app: shell
       }
     }
@@ -198,11 +198,11 @@ ShellRoot {
       WlrLayershell.namespace: "adv360-shot"
       WlrLayershell.layer: WlrLayer.Overlay
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-      color: Color.background
+      color: Theme.surface
 
       Editor {
         anchors.fill: parent
-        anchors.margins: Style.spacing.panelPadding
+        anchors.margins: 16
         app: shell
       }
     }

@@ -2,7 +2,7 @@
 
 Native Linux editor for the Kinesis Advantage360 with the SmartSet engine (the non-ZMK model). Kinesis ships no Linux tool and the SmartSet App breaks under Wine; the keyboard's configuration is a set of text files on its own USB volume (the v-Drive). `adv360` reads them, shows them on a rendered keyboard, edits remaps, macros, tap-and-hold and LEDs, and writes them back with a backup, an atomic write, a read-back and an eject. A human, an agent, or both can drive it: every verb is a CLI call that prints JSON.
 
-Two parts: the `adv360` binary (Bun/TypeScript, compiled, no runtime needed) and a Quickshell GUI themed by Omarchy.
+Two parts: the `adv360` binary (Bun/TypeScript, compiled, no runtime needed) and a Quickshell GUI with its own dark palette.
 
 ## Install on Omarchy
 
@@ -78,7 +78,7 @@ adv360 verify
 | `lsblk` | finding the `ADV360` volume | error `lsblk-missing` |
 | `udisksctl` | eject | error `udisksctl-missing` at eject time; the write already happened, `apply` again retries the eject |
 | `diff` (GNU) | `diff` verb | error `diff-failed` |
-| `quickshell` + Omarchy (`/usr/share/omarchy/shell`) | the GUI | error `quickshell-missing` / `gui-files-missing`; the CLI works without them |
+| `quickshell` | the GUI | error `quickshell-missing` / `gui-files-missing`; the CLI works without them |
 | `omarchy-notification-send` | notifications | a warning on stderr, nothing else |
 | `bun` | building only | `install.sh` stops |
 

@@ -39,5 +39,5 @@ Native Omarchy editor for the Kinesis Advantage360 (SmartSet engine) v-Drive: on
 - Discriminated unions with `switch` + `never` for states.
 - Comments only for an irreplaceable why (external constraint, workaround, contract policy).
 - Real fixtures under `tests/fixtures/real/` are byte-for-byte copies of the keyboard, never edited.
-- QML: Omarchy `Color`/`Style` tokens; one component per file; the GUI never touches files.
+- QML: the adv360 palette (`gui/theme/Theme.qml`) and controls (`gui/controls/`), never Omarchy's `qs.Commons` or `qs.Ui`; one component per file; the GUI never touches files.
 - Commits: English, imperative, scoped by phase.

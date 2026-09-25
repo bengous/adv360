@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import qs.Commons
+import "../theme"
 
 // Everything inside the window, shared by the floating window and the test panel.
 ColumnLayout {
@@ -8,7 +8,7 @@ ColumnLayout {
 
   required property var app
 
-  spacing: Style.spacing.panelGap
+  spacing: 12
 
   TopBar {
     Layout.fillWidth: true
@@ -29,21 +29,21 @@ ColumnLayout {
     visible: text !== ""
     text: root.app.cliMissing ? "adv360 is not on PATH: run install.sh first"
       : (root.app.status !== null && root.app.status.next ? "Next: " + root.app.status.next : "")
-    color: root.app.cliMissing ? Color.urgent : Color.muted
-    font.family: Style.font.family
-    font.pixelSize: Style.font.body
+    color: root.app.cliMissing ? Theme.bad : Theme.dim
+    font.family: Theme.font
+    font.pixelSize: Theme.body
     wrapMode: Text.Wrap
   }
 
   RowLayout {
     Layout.fillWidth: true
     Layout.fillHeight: true
-    spacing: Style.spacing.panelGap
+    spacing: 12
 
     ColumnLayout {
       Layout.fillWidth: true
       Layout.fillHeight: true
-      spacing: Style.spacing.panelGap
+      spacing: 12
 
       Keyboard {
         Layout.fillWidth: true

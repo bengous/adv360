@@ -135,16 +135,10 @@ wait_idle() {
 }
 
 launch() {
-  # The GUI still imports Omarchy's qs.Commons and qs.Ui: assemble the run dir adv360 gui builds.
-  local run="$tmp/run"
-  mkdir -p "$run"
-  local omarchy="${OMARCHY_PATH:-/usr/share/omarchy}/shell"
-  ln -s "$repo/gui/shell.qml" "$repo/gui/CliProcess.qml" "$repo/gui/components" "$repo/data" "$omarchy/Commons" "$omarchy/Ui" "$run/"
-
   ADV360_SCREEN="$OUTPUT" \
     ADV360_CMD="$(jq -cn --arg c "$repo/tools/gui-cli.sh" '[$c]')" \
     ADV360_SHOT_OUT="$out" \
-    quickshell -p "$run" >"$out/quickshell.log" 2>&1 &
+    quickshell -p "$repo/gui" >"$out/quickshell.log" 2>&1 &
   pid=$!
   wait_ready
   wait_idle

@@ -1,8 +1,7 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
-import qs.Commons
-import qs.Ui
+import "../theme"
+import "../controls"
 
 // Diff, the plan sentence, Apply / Discard / Verify / Restore, and the SmartSet footer.
 ColumnLayout {
@@ -34,23 +33,25 @@ ColumnLayout {
     return "will write " + files + ", backup at " + plan.backup_dir + (plan.eject ? ", then eject " + plan.eject : ", no eject (--source)")
   }
 
-  spacing: Style.spacing.md
+  spacing: 10
   onSessionStateChanged: confirming = false
 
   RowLayout {
     Layout.fillWidth: true
+
     Text {
-      color: root.sessionState === "conflict" ? Color.urgent : root.sessionState === "dirty" ? Color.accent : Color.muted
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
+      color: root.sessionState === "conflict" ? Theme.bad : root.sessionState === "dirty" ? Theme.pending : Theme.dim
+      font.family: Theme.font
+      font.pixelSize: Theme.body
       text: "session profile " + root.profile + ": " + root.sessionState
     }
+
     Text {
       Layout.fillWidth: true
       visible: root.message !== ""
-      color: Color.urgent
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
+      color: Theme.bad
+      font.family: Theme.font
+      font.pixelSize: Theme.body
       wrapMode: Text.Wrap
       text: root.message
     }
@@ -59,16 +60,16 @@ ColumnLayout {
   Flickable {
     Layout.fillWidth: true
     Layout.fillHeight: true
-    Layout.minimumHeight: 80
+    Layout.minimumHeight: 60
     contentWidth: diffText.implicitWidth
     contentHeight: diffText.implicitHeight
     clip: true
-    ScrollBar.vertical: ScrollBar {}
+
     Text {
       id: diffText
-      color: Color.foreground
-      font.family: "monospace"
-      font.pixelSize: Style.font.bodySmall
+      color: Theme.text
+      font.family: Theme.font
+      font.pixelSize: 12
       textFormat: Text.PlainText
       text: root.diffFiles.map(function(f) { return f.diff === "" ? f.rel + ": no change" : f.diff }).join("\n")
     }
@@ -77,35 +78,43 @@ ColumnLayout {
   Text {
     Layout.fillWidth: true
     visible: root.planText !== ""
-    color: Color.muted
-    font.family: Style.font.family
-    font.pixelSize: Style.font.bodySmall
+    color: Theme.dim
+    font.family: Theme.font
+    font.pixelSize: 12
     wrapMode: Text.Wrap
     text: root.planText
   }
 
   RowLayout {
     Layout.fillWidth: true
-    spacing: Style.spacing.controlGap
-    Button {
+    spacing: 8
+
+    Btn {
       text: root.confirming ? "Confirm apply to profile " + root.profile : "Apply"
-      bordered: true
-      selected: root.confirming
+      primary: root.confirming
       enabled: root.sessionState === "dirty" && root.mounted && root.plan !== null && !root.plan.error
       onClicked: { if (root.confirming) { root.confirming = false; root.applyRequested() } else root.confirming = true }
     }
-    Button { text: "Discard"; bordered: true; enabled: root.sessionState === "dirty" || root.sessionState === "conflict"; onClicked: { root.confirming = false; root.discardRequested() } }
-    Button { text: "Verify"; bordered: true; visible: root.awaitingVerify; enabled: root.mounted; onClicked: root.verifyRequested() }
+
+    Btn { text: "Discard"; enabled: root.sessionState === "dirty" || root.sessionState === "conflict"; onClicked: { root.confirming = false; root.discardRequested() } }
+    Btn { text: "Verify"; visible: root.awaitingVerify; enabled: root.mounted; onClicked: root.verifyRequested() }
+
     Item { Layout.fillWidth: true }
-    Dropdown {
-      label: "Restore"
-      value: root.restoreChoice
-      options: root.backups.map(function(b) { return { value: b, label: b } })
-      onChanged: function(v) { root.restoreChoice = v }
+
+    Repeater {
+      model: root.backups.slice(0, 3)
+
+      Btn {
+        required property var modelData
+        small: true
+        text: modelData
+        active: root.restoreChoice === modelData
+        onClicked: root.restoreChoice = modelData
+      }
     }
-    Button {
+
+    Btn {
       text: "Open restore session"
-      bordered: true
       enabled: root.restoreChoice !== "" && root.status !== null && root.mounted
       onClicked: root.restoreRequested(root.status.stateDir + "/backups/" + root.restoreChoice)
     }
@@ -113,9 +122,9 @@ ColumnLayout {
 
   Text {
     Layout.fillWidth: true
-    color: Color.muted
-    font.family: Style.font.family
-    font.pixelSize: Style.font.caption
+    color: Theme.dim
+    font.family: Theme.font
+    font.pixelSize: 11
     wrapMode: Text.Wrap
     text: "The keyboard does not update by itself: after Apply the v-Drive is ejected, press SmartSet + Hotkey 4 to reload, then SmartSet + Hotkey 3 twice to reopen it and Verify."
   }
