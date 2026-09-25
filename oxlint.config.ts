@@ -228,6 +228,20 @@ export default defineConfig({
       },
     },
     {
+      // The QML engine (Qt 6.11) imports these modules as they are: it rejects object
+      // spread and has no at(), toSorted(), toReversed(), flat(), flatMap(), replaceAll().
+      files: ["gui/**/*.mjs"],
+      rules: {
+        "eslint/prefer-object-spread": "off",
+        "unicorn/prefer-at": "off",
+        "unicorn/no-array-sort": "off",
+        "unicorn/no-array-reverse": "off",
+        "unicorn/prefer-array-flat": "off",
+        "unicorn/prefer-array-flat-map": "off",
+        "unicorn/prefer-string-replace-all": "off",
+      },
+    },
+    {
       // Tool contract: oxlint and oxfmt load their config as the default export;
       // the rule table is a list, not code.
       files: ["*.config.ts"],

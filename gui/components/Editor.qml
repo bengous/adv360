@@ -50,6 +50,7 @@ ColumnLayout {
         Layout.preferredHeight: root.height * 0.55
         Layout.minimumWidth: 0
         keyboard: root.app.keyboard
+        tokens: root.app.tokens
         viewData: root.app.viewData
         layerName: root.app.layerName
         selected: root.app.selected

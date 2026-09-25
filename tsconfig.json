@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "allowJs": false,
+    "allowJs": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
+    "checkJs": true,
     "exactOptionalPropertyTypes": true,
     "lib": ["ESNext"],
     "module": "Preserve",
@@ -24,5 +25,5 @@
     "types": ["bun"],
     "verbatimModuleSyntax": true
   },
-  "include": ["src/**/*.ts", "*.config.ts"]
+  "include": ["src/**/*.ts", "gui/**/*.mjs", "gui/**/*.test.ts", "*.config.ts"]
 }

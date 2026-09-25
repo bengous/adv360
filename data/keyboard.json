@@ -975,5 +975,357 @@
       "lfn": "defs",
       "rfn": "defs"
     }
+  },
+  "schematic": {
+    "columns": {
+      "x": [
+        0,
+        1.25,
+        2.25,
+        3.25,
+        4.25,
+        5.25,
+        6.25
+      ],
+      "stagger": [
+        0.3,
+        0.45,
+        0.1,
+        0,
+        0.05,
+        0.12,
+        -0.05
+      ]
+    },
+    "main": [
+      {
+        "position": "eql",
+        "col": 0,
+        "row": 0,
+        "w": 1.25
+      },
+      {
+        "position": "1",
+        "col": 1,
+        "row": 0,
+        "w": 1
+      },
+      {
+        "position": "2",
+        "col": 2,
+        "row": 0,
+        "w": 1
+      },
+      {
+        "position": "3",
+        "col": 3,
+        "row": 0,
+        "w": 1
+      },
+      {
+        "position": "4",
+        "col": 4,
+        "row": 0,
+        "w": 1
+      },
+      {
+        "position": "5",
+        "col": 5,
+        "row": 0,
+        "w": 1
+      },
+      {
+        "position": "kp",
+        "col": 6,
+        "row": 0,
+        "w": 1
+      },
+      {
+        "position": "tab",
+        "col": 0,
+        "row": 1,
+        "w": 1.25
+      },
+      {
+        "position": "q",
+        "col": 1,
+        "row": 1,
+        "w": 1
+      },
+      {
+        "position": "w",
+        "col": 2,
+        "row": 1,
+        "w": 1
+      },
+      {
+        "position": "e",
+        "col": 3,
+        "row": 1,
+        "w": 1
+      },
+      {
+        "position": "r",
+        "col": 4,
+        "row": 1,
+        "w": 1
+      },
+      {
+        "position": "t",
+        "col": 5,
+        "row": 1,
+        "w": 1
+      },
+      {
+        "position": "hk1",
+        "col": 6,
+        "row": 1,
+        "w": 1
+      },
+      {
+        "position": "esc",
+        "col": 0,
+        "row": 2,
+        "w": 1.25
+      },
+      {
+        "position": "a",
+        "col": 1,
+        "row": 2,
+        "w": 1
+      },
+      {
+        "position": "s",
+        "col": 2,
+        "row": 2,
+        "w": 1
+      },
+      {
+        "position": "d",
+        "col": 3,
+        "row": 2,
+        "w": 1
+      },
+      {
+        "position": "f",
+        "col": 4,
+        "row": 2,
+        "w": 1
+      },
+      {
+        "position": "g",
+        "col": 5,
+        "row": 2,
+        "w": 1
+      },
+      {
+        "position": "hk2",
+        "col": 6,
+        "row": 2,
+        "w": 1
+      },
+      {
+        "position": "lshf",
+        "col": 0,
+        "row": 3,
+        "w": 1.25
+      },
+      {
+        "position": "z",
+        "col": 1,
+        "row": 3,
+        "w": 1
+      },
+      {
+        "position": "x",
+        "col": 2,
+        "row": 3,
+        "w": 1
+      },
+      {
+        "position": "c",
+        "col": 3,
+        "row": 3,
+        "w": 1
+      },
+      {
+        "position": "v",
+        "col": 4,
+        "row": 3,
+        "w": 1
+      },
+      {
+        "position": "b",
+        "col": 5,
+        "row": 3,
+        "w": 1
+      },
+      {
+        "position": "lfn",
+        "col": 0,
+        "row": 4,
+        "w": 1.25
+      },
+      {
+        "position": "grav",
+        "col": 1,
+        "row": 4,
+        "w": 1
+      },
+      {
+        "position": "caps",
+        "col": 2,
+        "row": 4,
+        "w": 1
+      },
+      {
+        "position": "left",
+        "col": 3,
+        "row": 4,
+        "w": 1
+      },
+      {
+        "position": "rght",
+        "col": 4,
+        "row": 4,
+        "w": 1
+      }
+    ],
+    "thumb": {
+      "origin": [
+        5.45,
+        4.3
+      ],
+      "angle": 20,
+      "keys": [
+        {
+          "position": "lctr",
+          "x": 1,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "position": "lalt",
+          "x": 2,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "position": "bspc",
+          "x": 0,
+          "y": 1,
+          "w": 1,
+          "h": 2
+        },
+        {
+          "position": "del",
+          "x": 1,
+          "y": 1,
+          "w": 1,
+          "h": 2
+        },
+        {
+          "position": "home",
+          "x": 2,
+          "y": 1,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "position": "end",
+          "x": 2,
+          "y": 2,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    "leds": [
+      {
+        "indicator": "IND1",
+        "x": 1.15,
+        "y": -0.34
+      },
+      {
+        "indicator": "IND2",
+        "x": 1.5,
+        "y": -0.34
+      },
+      {
+        "indicator": "IND3",
+        "x": 1.85,
+        "y": -0.34
+      }
+    ],
+    "mirror": {
+      "eql": "hyph",
+      "1": "0",
+      "2": "9",
+      "3": "8",
+      "4": "7",
+      "5": "6",
+      "kp": "smartset",
+      "tab": "bsls",
+      "q": "p",
+      "w": "o",
+      "e": "i",
+      "r": "u",
+      "t": "y",
+      "hk1": "hk3",
+      "esc": "apos",
+      "a": "scol",
+      "s": "l",
+      "d": "k",
+      "f": "j",
+      "g": "h",
+      "hk2": "hk4",
+      "lshf": "rshf",
+      "z": "fsls",
+      "x": "perd",
+      "c": "comm",
+      "v": "m",
+      "b": "n",
+      "lfn": "rfn",
+      "grav": "cbrk",
+      "caps": "obrk",
+      "left": "down",
+      "rght": "up",
+      "lctr": "rctr",
+      "lalt": "rwin",
+      "bspc": "spc",
+      "del": "ent",
+      "home": "pgup",
+      "end": "pgdn",
+      "IND1": "IND6",
+      "IND2": "IND5",
+      "IND3": "IND4"
+    },
+    "gap": 1.0,
+    "palm": [
+      [
+        0,
+        6.6
+      ],
+      [
+        0.8,
+        8.5
+      ],
+      [
+        4.4,
+        8.95
+      ],
+      [
+        6.4,
+        8.75
+      ]
+    ],
+    "pedal": {
+      "x": 8.77,
+      "y": 7.6,
+      "w": 1.0,
+      "h": 1.4
+    }
   }
 }

@@ -1,0 +1,10 @@
+# Slice 2: the drawn keyboard with the four edits of the audit, and the pedal on the layer that assigns it.
+cli session set-remap --profile 1 --layer base --pos caps --action esc
+cli session set-taphold --profile 1 --layer base --pos a --tap a --ms 200 --hold lctr
+cli session set-macro --profile 1 --layer base --trigger h --cotrigger lctr --tokens {s5}{-lshf}{h}{+lshf}{i}
+cli session set-remap --profile 1 --layer base --pos q --action notatoken
+cli session set-remap --profile 1 --layer function1 --pos pedl --action lmou
+shot base
+expect state-base.json .pending == 5
+ipc layer function1
+shot fn1-pedal
