@@ -4,46 +4,29 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 import "../controls"
-import "../macro.mjs" as MacroStrip
 
 // The unwritten changes of the profile, one chip each, and the two ways out: discard or write.
 Rectangle {
   id: root
 
   required property var app
-  property bool confirming: false
 
   color: Theme.tray
 
-  function layerPrefix(layer) {
-    return layer === "base" ? "" : app.layerLabel(layer) + " · "
-  }
+  readonly property bool conflict: app.sessionState === "conflict"
 
   // subject → value, the value drawn as a keycap tinted like the key it lands on.
   function chipOf(edit) {
+    var name = app.changeName(edit)
     switch (edit.op) {
-    case "set-remap":
-      return { subject: layerPrefix(edit.layer) + app.nameOf(edit.position) + " →", value: app.labelOf(edit.action), kind: app.known(edit.action) ? "remap" : "bad" }
     case "set-taphold":
-      return { subject: layerPrefix(edit.layer) + app.nameOf(edit.position) + " → " + app.labelOf(edit.tap) + ", hold", value: app.labelOf(edit.hold), kind: app.known(edit.tap) && app.known(edit.hold) ? "taphold" : "bad" }
+      return { subject: name + " → " + app.labelOf(edit.tap) + ", hold", value: app.labelOf(edit.hold), kind: app.known(edit.tap) && app.known(edit.hold) ? "taphold" : "bad" }
     case "set-macro":
-      return { subject: layerPrefix(edit.layer) + (edit.cotrigger ? app.labelOf(edit.cotrigger).replace(/^(Left|Right) /, "") + " + " : "") + app.nameOf(edit.trigger) + " → types", value: MacroStrip.macroPreview(MacroStrip.stripOf(edit.tokens).strip), kind: "" }
-    case "remove":
-      return { subject: layerPrefix(edit.layer) + app.nameOf(edit.position) + " →", value: "factory", kind: "" }
-    case "remove-macro":
-      return { subject: layerPrefix(edit.layer) + "macro on " + app.nameOf(edit.trigger), value: "removed", kind: "" }
-    case "set-led":
-      return { subject: edit.indicator + " lights for", value: app.ledFunctionLabel(edit.function), kind: "" }
+      return { subject: name + " → types", value: app.preview(edit.tokens), kind: "" }
     default:
-      return { subject: "restore", value: "file from backup", kind: "" }
+      var after = app.afterOf(edit)
+      return { subject: name + " →", value: after.label, kind: after.kind }
     }
-  }
-
-  onVisibleChanged: confirming = false
-
-  Connections {
-    target: root.app
-    function onPendingChanged() { root.confirming = false }
   }
 
   Rectangle {
@@ -59,13 +42,37 @@ Rectangle {
     spacing: 10
 
     Text {
-      text: root.app.changes.length === 0 ? "Nothing to write" : "Not written:"
-      color: Theme.dim
+      visible: !root.conflict
+      text: root.app.changes.length > 0 ? "Not written:" : root.app.note !== "" ? root.app.note : "Nothing to write"
+      color: root.app.changes.length === 0 && root.app.note !== "" ? Theme.pending : Theme.dim
       font.family: Theme.font
       font.pixelSize: 12
     }
 
+    Text {
+      visible: root.conflict
+      Layout.fillWidth: true
+      text: "The files on the keyboard changed since your first edit on profile " + root.app.profile + "."
+      color: Theme.bad
+      font.family: Theme.font
+      font.pixelSize: 12
+      elide: Text.ElideRight
+    }
+
+    Btn {
+      visible: root.conflict
+      text: "Show diff"
+      onClicked: root.app.openReview()
+    }
+
+    Btn {
+      visible: root.conflict
+      text: "Discard"
+      onClicked: root.app.discardAll()
+    }
+
     Flickable {
+      visible: !root.conflict
       Layout.fillWidth: true
       Layout.preferredHeight: 34
       contentWidth: chips.implicitWidth
@@ -145,23 +152,18 @@ Rectangle {
     }
 
     Btn {
+      visible: !root.conflict
       text: "Discard all"
       enabled: root.app.pending > 0
       onClicked: root.app.discardAll()
     }
 
     Btn {
-      text: root.confirming ? "Confirm: write profile " + root.app.profile : "Write to keyboard"
+      visible: !root.conflict
+      text: "Write to keyboard"
       primary: true
-      enabled: root.app.pending > 0 && root.app.mounted
-      onClicked: {
-        if (!root.confirming) {
-          root.confirming = true
-          return
-        }
-        root.confirming = false
-        root.app.act(["apply", "--profile", String(root.app.profile)])
-      }
+      enabled: root.app.sessionState === "dirty" && root.app.mounted
+      onClicked: root.app.openReview()
     }
   }
 }

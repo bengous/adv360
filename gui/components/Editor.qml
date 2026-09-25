@@ -77,7 +77,7 @@ Item {
           id: drawer
           visible: root.app.mode === "keys" && root.app.drawer !== "none"
           Layout.fillWidth: true
-          Layout.preferredHeight: root.app.drawer === "one" ? 232 : root.app.drawer === "taphold" ? 280 : 316
+          Layout.preferredHeight: ({ one: 232, taphold: 280, macro: 316, review: 330 })[root.app.drawer] || 232
           app: root.app
           ghost: ghost
           notchX: keyboardView.x + keyboardView.centerOf(root.app.selected).x - x
@@ -87,16 +87,10 @@ Item {
           visible: root.app.mode === "keys" && root.app.drawer === "none"
           Layout.fillWidth: true
           Layout.fillHeight: false
-          Layout.preferredHeight: 200
-          session: root.app.session
+          Layout.preferredHeight: 80
           status: root.app.status
-          diffFiles: root.app.diffFiles
-          plan: root.app.plan
-          message: root.app.message
           backups: root.app.backups
           profile: root.app.profile
-          onApplyRequested: root.app.act(["apply", "--profile", String(root.app.profile)])
-          onDiscardRequested: root.app.discardAll()
           onVerifyRequested: root.app.act(["verify"])
           onRestoreRequested: function(dir) { root.app.act(["restore", dir, "--profile", String(root.app.profile)]) }
         }

@@ -13,6 +13,8 @@
 #   shot <name>              <out-dir>/<name>.png and <out-dir>/state-<name>.json
 #   status <file|->          `vdrive status` answers this JSON file (path relative to the
 #                            script); "-" gives the real verb back
+#   append <rel> <line>      adds a CRLF line to <rel> of the copy, as another tool writing to
+#                            the keyboard would
 #   expect <file> <jq>       jq -e <jq> on <out-dir>/<file>; a .log file is read as one string
 # Every verb the GUI runs lands in <out-dir>/calls.log.
 #
@@ -188,6 +190,9 @@ step() {
         done
         wait_idle
       fi
+      ;;
+    append)
+      printf '%s\r\n' "${rest#*"${args[0]}" }" >>"$tmp/source/${args[0]}"
       ;;
     expect)
       local file=${args[0]} filter=${rest#*"${args[0]}"}

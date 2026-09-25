@@ -14,9 +14,11 @@ Item {
   property real notchX: 40
 
   readonly property var key: app.selectedKey
+  readonly property bool onKey: app.drawer === "one" || app.drawer === "taphold" || app.drawer === "macro"
   readonly property string currentAction: key === null ? "" : key.kind === "taphold" ? key.tap : String(key.action || "")
 
   Rectangle {
+    visible: root.onKey
     x: Math.max(12, Math.min(root.width - 26, root.notchX - 7))
     y: -7
     width: 14
@@ -35,6 +37,7 @@ Item {
     border.color: Theme.panelEdge
 
     Rectangle {
+      visible: root.onKey
       x: Math.max(13, Math.min(root.width - 25, root.notchX - 6))
       y: 0
       width: 12
@@ -52,6 +55,7 @@ Item {
     spacing: 8
 
     RowLayout {
+      visible: root.onKey
       Layout.fillWidth: true
       spacing: 12
 
@@ -167,6 +171,13 @@ Item {
       Layout.fillHeight: true
       app: root.app
       ghost: root.ghost
+    }
+
+    Review {
+      visible: root.app.drawer === "review"
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      app: root.app
     }
   }
 }

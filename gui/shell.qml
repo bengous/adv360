@@ -18,6 +18,7 @@ ShellRoot {
   }
   // Set by tools/gui-shot.sh only: the GUI then draws on that output as a layer surface.
   readonly property string screenName: Quickshell.env("ADV360_SCREEN") || ""
+  readonly property string home: Quickshell.env("HOME") || ""
   readonly property var testScreen: {
     for (var i = 0; i < Quickshell.screens.length; i++) if (Quickshell.screens[i].name === screenName) return Quickshell.screens[i]
     return null
@@ -36,6 +37,7 @@ ShellRoot {
   property var session: null
   property var diffFiles: []
   property var plan: null
+  property var disk: null
   property var backups: []
   property bool cliMissing: false
 
@@ -58,12 +60,15 @@ ShellRoot {
   property bool macroWritten: false
   property var writtenCotrigger: null
   property string message: ""
+  property string note: ""
   property var last: null
 
   property var queue: []
   property var current: null
 
   readonly property bool mounted: status !== null && status.state === "mounted"
+  readonly property bool busy: current !== null || queue.length > 0
+  readonly property string sessionState: session === null ? "clean" : String(session.state)
   readonly property var selectedKey: keyAt(selected)
   readonly property var edits: session === null ? [] : (session.layout ? session.layout.edits : []).concat(session.led ? session.led.edits : [])
   readonly property int pending: edits.length
@@ -97,6 +102,63 @@ ShellRoot {
   function known(token) { return Assign.isKnown(String(token), tokens) }
   function actionOf(key) { return Assign.actionOf(key) }
   function ledFunctionLabel(name) { return name === "layer" ? "Layer" : tokens.led[name] || name }
+  function modifierLabel(token) { return labelOf(token).replace(/^(Left|Right) /, "") }
+  function ledName(indicator) {
+    var n = Number(String(indicator).slice(3))
+    return n <= 3 ? "Left LED " + n : "Right LED " + (n - 3)
+  }
+  function factoryOf(layer, position) {
+    var action = (keyboard.defaults[layer] || {})[position] || keyboard.defaults.base[position]
+    return action === undefined ? null : action
+  }
+
+  function changeName(edit) {
+    var prefix = edit.layer && edit.layer !== "base" ? layerLabel(edit.layer) + " · " : ""
+    switch (edit.op) {
+    case "set-macro":
+    case "remove-macro":
+      return prefix + (edit.cotrigger ? modifierLabel(edit.cotrigger) + " + " : "") + nameOf(edit.trigger)
+    case "set-led":
+      return ledName(edit.indicator)
+    case "replace-file":
+      return "Restored file"
+    default:
+      return prefix + nameOf(edit.position)
+    }
+  }
+
+  function preview(tokens) { return Macro.macroPreview(Macro.stripOf(tokens).strip) }
+
+  // What a change makes the key do, and the tint of its keycap.
+  function afterOf(edit) {
+    switch (edit.op) {
+    case "set-remap":
+      return { label: labelOf(edit.action), kind: known(edit.action) ? "remap" : "bad" }
+    case "set-taphold":
+      return { label: labelOf(edit.tap) + ", hold " + labelOf(edit.hold) + " after " + edit.ms + " ms", kind: known(edit.tap) && known(edit.hold) ? "taphold" : "bad" }
+    case "set-macro":
+      return { label: "types " + preview(edit.tokens), kind: "macro" }
+    case "remove":
+      var factory = factoryOf(edit.layer, edit.position)
+      return { label: (factory === null ? "nothing" : labelOf(factory)) + " (factory)", kind: "" }
+    case "remove-macro":
+      return { label: "no macro", kind: "" }
+    case "set-led":
+      return { label: ledFunctionLabel(edit.function), kind: "" }
+    default:
+      return { label: "file from backup", kind: "" }
+    }
+  }
+
+  function beforeLabel(before) {
+    switch (before.kind) {
+    case "action": return before.action === null ? "nothing" : labelOf(before.action)
+    case "taphold": return labelOf(before.tap) + ", hold " + labelOf(before.hold)
+    case "macro": return before.tokens === null ? "no macro" : "types " + preview(before.tokens)
+    case "led": return ledFunctionLabel(before.function)
+    default: return "the current file"
+    }
+  }
   function layerLabel(name) {
     for (var i = 0; i < layers.length; i++) if (layers[i].value === name) return layers[i].label
     return name
@@ -118,6 +180,10 @@ ShellRoot {
   function setTab(tab) {
     if (tab === "none") {
       closeDrawer()
+      return
+    }
+    if (tab === "review") {
+      openReview()
       return
     }
     capturing = false
@@ -146,6 +212,39 @@ ShellRoot {
     capturing = false
     selected = ""
     drawer = "none"
+  }
+
+  // "Write to keyboard" (H1): the review reads the keyboard's own lines to show what each change replaces.
+  function openReview() {
+    capturing = false
+    selected = ""
+    drawer = "review"
+    disk = null
+    run(["inspect", "--profile", String(profile)], function(code, lines) {
+      var p = code === 0 && lines.length > 0 && lines[0].profiles.length > 0 ? lines[0].profiles[0] : null
+      disk = p === null ? { layout: [], led: [] } : { layout: p.layout ? p.layout.entries : [], led: p.led ? p.led.entries : [] }
+    })
+  }
+
+  // The same path as "Write and eject": apply, then show what the keyboard needs next.
+  function write() {
+    if (sessionState !== "dirty") {
+      message = "nothing to write on profile " + profile
+      return
+    }
+    run(["apply", "--profile", String(profile)], function(code, lines) {
+      var report = lines.length > 0 ? lines[lines.length - 1] : null
+      last = { verb: "apply", code: code, report: report }
+      if (code !== 0) {
+        message = report && report.message ? String(report.message) : "apply exited " + code
+      } else {
+        message = ""
+        note = report.outcome.kind === "ejected" ? "Written to profile " + profile + ": " + report.outcome.next : "Written to profile " + profile + " and read back."
+        closeDrawer()
+      }
+      refresh()
+      pollStatus()
+    })
   }
 
   // A click on the drawn keyboard: opens the drawer, or, drawer open, copies that key's action (H5).
@@ -351,6 +450,7 @@ ShellRoot {
       var report = lines.length > 0 ? lines[lines.length - 1] : null
       last = { verb: args[0] === "session" || args[0] === "vdrive" ? args[0] + " " + args[1] : args[0], code: code, report: report }
       message = code === 0 ? "" : (report && report.message ? String(report.message) : "adv360 exited " + code)
+      note = ""
       if (code === 0 && calls.length > 1) actAll(calls.slice(1))
       else refresh()
     })
@@ -362,9 +462,10 @@ ShellRoot {
     })
     run(["session", "status", "--profile", String(profile)], function(code, lines) {
       session = lines.length > 0 ? lines[0] : null
-      if (session !== null && session.state === "dirty") {
+      if (session !== null && (session.state === "dirty" || session.state === "conflict")) {
         run(["diff", "--profile", String(profile)], function(c, l) { diffFiles = c === 0 && l.length > 0 ? l[0].files : [] })
-        run(["apply", "--profile", String(profile), "--dry-run"], function(c, l) { plan = l.length > 0 ? l[0] : null })
+        if (session.state === "dirty") run(["apply", "--profile", String(profile), "--dry-run"], function(c, l) { plan = l.length > 0 ? l[0] : null })
+        else plan = null
       } else {
         diffFiles = []
         plan = null
@@ -390,7 +491,7 @@ ShellRoot {
       pending: pending,
       message: message,
       last: last,
-      busy: current !== null || queue.length > 0
+      busy: busy
     }
   }
 
@@ -438,6 +539,8 @@ ShellRoot {
     function slot(name: string): void { shell.slot = name }
     function assign(token: string): void { shell.assign(token) }
     function set(field: string, value: string): void { shell.setField(field, value) }
+    function remove(index: int): void { if (index >= 0 && index < shell.changes.length) shell.removeEdits(shell.changes[index].indices) }
+    function write(): void { shell.write() }
     function state(): string { return JSON.stringify(shell.snapshot()) }
   }
 

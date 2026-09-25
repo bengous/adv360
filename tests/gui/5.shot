@@ -1,0 +1,25 @@
+# Slice 5: review, write, the × of a chip, and the conflict banner.
+ipc select caps
+ipc assign esc
+ipc select q
+ipc assign notatoken
+ipc select a
+ipc assign b
+ipc remove 2
+expect calls.log test("session discard --profile 1")
+ipc drawer review
+shot review
+expect state-review.json .drawer == "review" and .pending == 2
+ipc write
+shot written
+expect state-written.json .last.report.outcome.kind == "verified-by-readback" and .drawer == "none"
+cli session status --profile 1
+expect cli-1.json .state == "clean" and .layout == null
+cli inspect --profile 1
+expect cli-2.json [.profiles[0].layout.entries[] | select(.kind == "remap" and .position == "caps" and .action == "esc")] | length == 1
+cli session set-remap --profile 2 --layer base --pos caps --action esc
+append layouts/layout2.txt [w]>[q]
+ipc profile 2
+shot conflict
+ipc drawer review
+shot conflict-diff
