@@ -1,0 +1,17 @@
+{
+  "state": "ejected",
+  "observed": { "state": "ejected", "device": "/dev/sdz1" },
+  "active_profile": 1,
+  "firmware": { "left": "1.0.69", "right": "1.0.69" },
+  "pending_write": {
+    "profile": 1,
+    "started_at": "2026-09-25T13:47:00.000Z",
+    "backup_dir": "/nowhere/backups/20260925T134700Z",
+    "source": { "dir": "/run/media/ADV360", "device": "/dev/sdz1" },
+    "files": [{ "rel": "layouts/layout1.txt", "before": "b", "after": "a" }],
+    "phase": { "kind": "ejected" }
+  },
+  "next": "SmartSet + Hotkey 4 to reload, then SmartSet + Hotkey 3 twice to reopen, then adv360 verify",
+  "version": "0.1.0",
+  "stateDir": "/nowhere"
+}

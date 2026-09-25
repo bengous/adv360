@@ -10,6 +10,7 @@ RowLayout {
   property int profile: 1
   property string layerName: "base"
   property string tab: "layout"
+  property var cycle: ({ kind: "open" })
 
   signal profileSelected(int n)
   signal layerSelected(string name)
@@ -18,16 +19,23 @@ RowLayout {
   signal ejectRequested()
 
   readonly property string vdriveState: status !== null ? String(status.state) : "unknown"
-  readonly property color pillColor: vdriveState === "mounted" || vdriveState === "busy-writing" ? Theme.pending
-    : vdriveState === "corrupt-suspected" ? Theme.bad
-    : vdriveState === "ejected" ? Theme.text
-    : Theme.muted
+  // Open, Edit, Write, Reload, Verify: done, now, waiting on a chord, or failed.
+  readonly property var steps: {
+    var names = ["Open", "Edit", "Write", "Reload", "Verify"]
+    var kind = cycle.kind
+    var at = kind === "broken" ? 2 : ["open", "edit", "write", "reload", "verify"].indexOf(kind)
+    return names.map(function(name, i) {
+      var state = i < at ? "done" : i > at ? "todo" : kind === "broken" ? "bad" : kind === "open" || kind === "reload" ? "wait" : "now"
+      return { name: name, state: state }
+    })
+  }
   readonly property var layers: [
     { value: "base", label: "Base" }, { value: "keypad", label: "Kp" },
     { value: "function1", label: "Fn1" }, { value: "function2", label: "Fn2" }, { value: "function3", label: "Fn3" }
   ]
 
   spacing: 8
+  clip: true
 
   Text {
     text: "Profile"
@@ -67,21 +75,55 @@ RowLayout {
 
   Item { Layout.fillWidth: true }
 
-  Rectangle {
-    radius: 15
-    color: Theme.alpha(root.pillColor, 0.12)
-    border.color: root.pillColor
-    border.width: 1
-    implicitHeight: 30
-    implicitWidth: pillText.implicitWidth + 24
+  Row {
+    id: cycleLine
+    spacing: 0
 
-    Text {
-      id: pillText
-      anchors.centerIn: parent
-      color: Theme.text
-      font.family: Theme.font
-      font.pixelSize: 12
-      text: "v-Drive " + root.vdriveState
+    Repeater {
+      model: root.steps
+
+      Row {
+        id: step
+
+        required property var modelData
+        required property int index
+        readonly property color dot: modelData.state === "done" ? Theme.focus
+          : modelData.state === "now" ? Theme.pending
+          : modelData.state === "wait" ? Theme.macro
+          : modelData.state === "bad" ? Theme.bad
+          : "transparent"
+
+        spacing: 6
+
+        Rectangle {
+          visible: step.index > 0
+          anchors.verticalCenter: parent.verticalCenter
+          width: 32
+          height: 1
+          color: Theme.muted
+
+          Rectangle { width: 8; height: 1; color: Theme.surface }
+          Rectangle { x: parent.width - 8; width: 8; height: 1; color: Theme.surface }
+        }
+
+        Rectangle {
+          anchors.verticalCenter: parent.verticalCenter
+          width: 9
+          height: 9
+          radius: 4.5
+          color: step.dot
+          border.width: 1.5
+          border.color: step.modelData.state === "todo" ? Theme.muted : step.dot
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          text: step.modelData.name
+          color: step.modelData.state === "todo" ? Theme.dim : step.modelData.state === "bad" ? Theme.bad : Theme.text
+          font.family: Theme.font
+          font.pixelSize: 12
+        }
+      }
     }
   }
 

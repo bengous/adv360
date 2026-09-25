@@ -1,0 +1,17 @@
+# Slice 6: the cycle line, the reload drawer with SmartSet and Hotkey 4 glowing, one automatic verify.
+ipc select caps
+ipc assign esc
+shot edit
+expect state-edit.json .cycle == {"kind": "edit", "pending": 1}
+status reload.json
+shot reload
+expect state-reload.json .cycle.kind == "reload" and .drawer == "reload"
+status verify.json
+shot verify
+expect state-verify.json .cycle.kind == "verify" and .last.verb == "verify"
+status verify.json
+expect calls.log [split("\n")[] | select(. == "verify")] | length == 1
+status broken.json
+shot broken
+expect state-broken.json .cycle == {"kind": "broken", "backup": "/nowhere/backups/20260925T134700Z"}
+expect calls.log [split("\n")[] | select(. == "verify")] | length == 1

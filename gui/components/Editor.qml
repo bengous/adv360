@@ -21,12 +21,14 @@ Item {
 
     TopBar {
       Layout.fillWidth: true
+      Layout.minimumWidth: 0
       Layout.margins: 16
       Layout.bottomMargin: 8
       status: root.app.status
       profile: root.app.profile
       layerName: root.app.layerName
       tab: root.app.mode === "lights" ? "lighting" : "layout"
+      cycle: root.app.cycle
       onProfileSelected: function(n) { root.app.profile = n }
       onLayerSelected: function(name) { root.app.layerName = name }
       onTabSelected: function(name) { root.app.mode = name === "lighting" ? "lights" : "keys" }
@@ -38,9 +40,8 @@ Item {
       Layout.fillWidth: true
       Layout.leftMargin: 16
       visible: text !== ""
-      text: root.app.cliMissing ? "adv360 is not on PATH: run install.sh first"
-        : (root.app.status !== null && root.app.status.next ? "Next: " + root.app.status.next : "")
-      color: root.app.cliMissing ? Theme.bad : Theme.dim
+      text: root.app.cliMissing ? "adv360 is not on PATH: run install.sh first" : ""
+      color: Theme.bad
       font.family: Theme.font
       font.pixelSize: 12
       wrapMode: Text.Wrap
@@ -67,7 +68,8 @@ Item {
           viewData: root.app.viewData
           layerName: root.app.layerName
           selected: root.app.selected
-          targeting: root.app.drawer !== "none"
+          targeting: root.app.selected !== ""
+          glow: root.app.drawer === "reload" && root.app.cycle.kind === "reload" ? ["smartset", "hk4"] : []
           ghost: ghost
           onKeyClicked: function(position) { root.app.keyClicked(position) }
           onDropped: function(position, payload) { root.app.dropOn(position, payload) }
@@ -77,7 +79,7 @@ Item {
           id: drawer
           visible: root.app.mode === "keys" && root.app.drawer !== "none"
           Layout.fillWidth: true
-          Layout.preferredHeight: ({ one: 232, taphold: 280, macro: 316, review: 330 })[root.app.drawer] || 232
+          Layout.preferredHeight: ({ one: 232, taphold: 280, macro: 316, review: 330, reload: 150 })[root.app.drawer] || 232
           app: root.app
           ghost: ghost
           notchX: keyboardView.x + keyboardView.centerOf(root.app.selected).x - x

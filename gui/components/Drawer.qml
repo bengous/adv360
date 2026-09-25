@@ -179,5 +179,12 @@ Item {
       Layout.fillHeight: true
       app: root.app
     }
+
+    Reload {
+      visible: root.app.drawer === "reload"
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      app: root.app
+    }
   }
 }

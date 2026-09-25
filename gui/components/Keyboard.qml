@@ -20,6 +20,9 @@ Item {
   // Drawer open: a click on another key copies its action, so every key shows as a target.
   property bool targeting: false
   property var ghost: null
+  // Keys the human must press now (SmartSet + Hotkey 4 after a write): they pulse, the rest dims.
+  property var glow: []
+  readonly property var glowLabels: ({ smartset: "hold", hk4: "then press" })
 
   signal keyClicked(string position)
   signal ledClicked(string indicator)
@@ -111,13 +114,16 @@ Item {
         : kind === "taphold" ? Theme.tint(Theme.taphold, 0.3)
         : hasMacro ? Theme.tint(Theme.macro, 0.22)
         : Theme.cap
-      readonly property color ink: bad ? Theme.bad : legend.muted ? Theme.dim : Theme.text
+      readonly property bool glowing: root.glow.indexOf(modelData.position) >= 0
+      readonly property color ink: glowing ? Theme.ground : bad ? Theme.bad : legend.muted ? Theme.dim : Theme.text
 
       x: root.ox + (modelData.cx - modelData.w / 2) * root.unit
       y: root.oy + (modelData.cy - modelData.h / 2) * root.unit
       width: modelData.w * root.unit
       height: modelData.h * root.unit
       rotation: modelData.angle
+      opacity: root.glow.length > 0 && !glowing ? 0.3 : 1
+      z: glowing ? 1 : 0
 
       Rectangle {
         x: 3 * root.s
@@ -135,7 +141,7 @@ Item {
         width: parent.width - 14 * root.s
         height: parent.height - 15 * root.s
         radius: 6 * root.s
-        color: cap.face
+        color: cap.glowing ? Theme.remap : cap.face
 
         Shape {
           visible: cap.hasMacro
@@ -212,6 +218,51 @@ Item {
           font.family: Theme.font
           font.pixelSize: Math.max(1, Math.min(8.5, Legend.fontFor([text], cap.modelData.w, cap.modelData.h)) * root.s)
           font.weight: Font.DemiBold
+        }
+      }
+
+      Rectangle {
+        visible: cap.glowing
+        anchors.centerIn: parent
+        width: parent.width
+        height: parent.height
+        radius: 10 * root.s
+        color: "transparent"
+        border.color: Theme.remap
+        border.width: 2 * root.s
+
+        SequentialAnimation on scale {
+          running: cap.glowing
+          loops: Animation.Infinite
+          NumberAnimation { from: 1; to: 1.35; duration: 1600; easing.type: Easing.OutCubic }
+        }
+
+        SequentialAnimation on opacity {
+          running: cap.glowing
+          loops: Animation.Infinite
+          NumberAnimation { from: 0.85; to: 0; duration: 1600; easing.type: Easing.OutCubic }
+        }
+      }
+
+      Rectangle {
+        visible: cap.glowing
+        x: parent.width + 4 * root.s
+        anchors.verticalCenter: parent.verticalCenter
+        width: glowText.implicitWidth + 12
+        height: glowText.implicitHeight + 6
+        radius: 5
+        color: Theme.surface
+        border.width: 1
+        border.color: Theme.remap
+
+        Text {
+          id: glowText
+          anchors.centerIn: parent
+          text: root.glowLabels[cap.modelData.position] || ""
+          color: Theme.remap
+          font.family: Theme.font
+          font.pixelSize: Math.max(10, 13 * root.s)
+          font.weight: Font.Bold
         }
       }
 

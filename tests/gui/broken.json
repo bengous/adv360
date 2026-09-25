@@ -1,0 +1,25 @@
+{
+  "state": "corrupt-suspected",
+  "observed": {
+    "state": "mounted",
+    "mount": "/run/media/ADV360",
+    "device": "/dev/sdz1"
+  },
+  "active_profile": 1,
+  "firmware": { "left": "1.0.69", "right": "1.0.69" },
+  "pending_write": {
+    "profile": 1,
+    "started_at": "2026-09-25T13:47:00.000Z",
+    "backup_dir": "/nowhere/backups/20260925T134700Z",
+    "source": { "dir": "/run/media/ADV360", "device": "/dev/sdz1" },
+    "files": [{ "rel": "layouts/layout1.txt", "before": "b", "after": "a" }],
+    "phase": {
+      "kind": "failed",
+      "step": "readback",
+      "error": "layouts/layout1.txt differs after rename"
+    }
+  },
+  "next": "compare with the backup (adv360 restore <backup-dir>) before using the keyboard",
+  "version": "0.1.0",
+  "stateDir": "/nowhere"
+}

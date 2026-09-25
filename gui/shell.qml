@@ -7,6 +7,7 @@ import "components"
 import "assign.mjs" as Assign
 import "edits.mjs" as Edits
 import "macro.mjs" as Macro
+import "cycle.mjs" as Cycle
 
 // The editor's state and every action on it: views bind to this object, clicks and the
 // adv360 IPC target call the same functions, and every change goes through the CLI.
@@ -62,6 +63,10 @@ ShellRoot {
   property string message: ""
   property string note: ""
   property var last: null
+  // Auto-verify (H2): one `adv360 verify` per write record, keyed by its start time.
+  property var verifyResult: null
+  property string verifiedFor: ""
+  property string cycleKind: ""
 
   property var queue: []
   property var current: null
@@ -73,6 +78,7 @@ ShellRoot {
   readonly property var edits: session === null ? [] : (session.layout ? session.layout.edits : []).concat(session.led ? session.led.edits : [])
   readonly property int pending: edits.length
   readonly property var changes: Edits.changes(edits)
+  readonly property var cycle: Cycle.cycleStep(status, session)
 
   FileView { id: keyboardFile; path: Quickshell.shellDir + "/../data/keyboard.json"; blockLoading: true }
   FileView { id: tokensFile; path: Quickshell.shellDir + "/../data/tokens.json"; blockLoading: true }
@@ -80,6 +86,18 @@ ShellRoot {
   onProfileChanged: { closeDrawer(); refresh() }
   onLayerNameChanged: { closeDrawer(); refresh() }
   onModeChanged: closeDrawer()
+  onCycleChanged: {
+    if (cycle.kind !== cycleKind) {
+      cycleKind = cycle.kind
+      // Edits are refused until the write is verified: the reload drawer takes over.
+      if (cycleKind === "reload" || cycleKind === "verify" || cycleKind === "broken") {
+        capturing = false
+        selected = ""
+        drawer = "reload"
+      }
+    }
+    if (cycle.kind === "verify") autoVerify()
+  }
   Component.onCompleted: {
     if (screenName !== "" && testScreen === null) {
       console.error("adv360: no screen named " + screenName)
@@ -239,8 +257,14 @@ ShellRoot {
         message = report && report.message ? String(report.message) : "apply exited " + code
       } else {
         message = ""
-        note = report.outcome.kind === "ejected" ? "Written to profile " + profile + ": " + report.outcome.next : "Written to profile " + profile + " and read back."
-        closeDrawer()
+        verifyResult = null
+        if (report.outcome.kind === "ejected") {
+          selected = ""
+          drawer = "reload"
+        } else {
+          note = "Written to profile " + profile + " and read back."
+          closeDrawer()
+        }
       }
       refresh()
       pollStatus()
@@ -371,6 +395,28 @@ ShellRoot {
   }
 
   // Back to the factory action; in the macro tab, the macro goes.
+  function autoVerify() {
+    var record = status !== null ? status.pending_write : null
+    if (record === null || record.started_at === verifiedFor) return
+    verifiedFor = record.started_at
+    verifyResult = null
+    selected = ""
+    drawer = "reload"
+    run(["verify"], function(code, lines) {
+      var report = lines.length > 0 ? lines[lines.length - 1] : null
+      verifyResult = { code: code, report: report }
+      last = { verb: "verify", code: code, report: report }
+      refresh()
+      pollStatus()
+    })
+  }
+
+  // Opens a session that puts the backup's files back; Write then makes it real.
+  function restore(backupDir) {
+    closeDrawer()
+    act(["restore", backupDir, "--profile", String(profile)])
+  }
+
   function reset() {
     if (selected === "") return
     if (drawer === "macro") setStrip([])
@@ -487,7 +533,7 @@ ShellRoot {
       mode: mode,
       selected: selected === "" ? null : selected,
       drawer: drawer,
-      cycle: null,
+      cycle: cycle,
       pending: pending,
       message: message,
       last: last,
