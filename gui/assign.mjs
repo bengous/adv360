@@ -4,6 +4,9 @@
 
 /**
  * @typedef {{ categories: { name: string, tokens: Record<string, string> }[] }} TokensJson
+ * @typedef {{ cotrigger: string | null, tokens: readonly string[] }} ViewMacro
+ * @typedef {{ position: string, kind: "default" | "remap", action: string | null, macros: readonly ViewMacro[] }
+ *   | { position: string, kind: "taphold", tap: string, ms: number, hold: string, macros: readonly ViewMacro[] }} ViewKey
  */
 
 /**
@@ -34,4 +37,64 @@ export function isKnown(token, tokens) {
   return tokens.categories.some((c) =>
     Object.keys(c.tokens).some((t) => t.toLowerCase() === wanted),
   );
+}
+
+/**
+ * What a position is called: its factory action on the base layer, or its hotkey number.
+ * @param {string} position
+ * @param {Record<string, string>} baseDefaults
+ * @param {Record<string, string>} labelMap
+ */
+export function keyName(position, baseDefaults, labelMap) {
+  if (position.startsWith("hk")) {
+    return `Hotkey ${position.slice(2)}`;
+  }
+
+  if (position === "pedl") {
+    return "Pedal";
+  }
+
+  const action = baseDefaults[position];
+
+  return action === undefined ? position : (labelMap[action] ?? action);
+}
+
+/**
+ * The action a key performs when tapped: what a copy onto a single slot takes.
+ * @param {ViewKey} key
+ * @returns {string | null}
+ */
+export function actionOf(key) {
+  return key.kind === "taphold" ? key.tap : key.action;
+}
+
+/**
+ * The session edit that gives `target` the effective action of `source` on the layer shown.
+ * A tap-and-hold source copies tap, hold and delay; a macro on the source stays behind.
+ * @param {ViewKey} source
+ * @param {string} target
+ * @param {string} layer
+ * @param {number} profile
+ * @returns {string[] | null}
+ */
+export function copyArgs(source, target, layer, profile) {
+  const at = ["--profile", String(profile), "--layer", layer, "--pos", target];
+
+  if (source.kind === "taphold") {
+    return [
+      "session",
+      "set-taphold",
+      ...at,
+      "--tap",
+      source.tap,
+      "--ms",
+      String(source.ms),
+      "--hold",
+      source.hold,
+    ];
+  }
+
+  return source.action === null || source.action === ""
+    ? null
+    : ["session", "set-remap", ...at, "--action", source.action];
 }

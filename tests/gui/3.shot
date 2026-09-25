@@ -1,0 +1,13 @@
+# Slice 3: the drawer assigns one action to the selected key.
+ipc select caps
+shot drawer
+expect state-drawer.json .selected == "caps" and .drawer == "one"
+ipc assign esc
+shot assigned
+cli session status --profile 1
+expect cli-1.json .layout.edits == [{"op": "set-remap", "layer": "base", "position": "caps", "action": "esc"}]
+ipc select q
+ipc assign notatoken
+ipc drawer none
+shot tray
+expect state-tray.json .pending == 2 and .drawer == "none" and .selected == null

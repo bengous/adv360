@@ -12,6 +12,7 @@ Rectangle {
   property bool current: false
   property bool glow: false
   property bool interactive: false
+  property bool hover: false
 
   signal clicked()
 
@@ -33,9 +34,9 @@ Rectangle {
     anchors.fill: parent
     anchors.bottomMargin: 2
     radius: 6
-    color: area.containsMouse ? Qt.lighter(root.face, 1.18) : root.face
+    color: area.containsMouse || root.hover ? Qt.lighter(root.face, 1.18) : root.face
     border.width: 1
-    border.color: area.containsMouse ? Theme.focus : Theme.capBorder
+    border.color: area.containsMouse || root.hover ? Theme.focus : Theme.capBorder
   }
 
   Row {

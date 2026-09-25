@@ -17,9 +17,13 @@ Item {
   property var viewData: null
   property string layerName: "base"
   property string selected: ""
+  // Drawer open: a click on another key copies its action, so every key shows as a target.
+  property bool targeting: false
+  property var ghost: null
 
   signal keyClicked(string position)
   signal ledClicked(string indicator)
+  signal dropped(string position, var payload)
 
   readonly property var placed: keyboard ? Layout.place(keyboard.schematic) : null
   readonly property var labelMap: tokens ? Assign.labels(tokens) : ({})
@@ -43,6 +47,15 @@ Item {
 
   function known(token) {
     return tokens === null || Assign.isKnown(String(token), tokens)
+  }
+
+  function centerOf(position) {
+    if (placed === null) return Qt.point(0, 0)
+    for (var i = 0; i < placed.keys.length; i++) {
+      var k = placed.keys[i]
+      if (k.position === position) return Qt.point(ox + k.cx * unit, oy + k.cy * unit)
+    }
+    return Qt.point(width / 2, 0)
   }
 
   function ledState(indicator) {
@@ -214,11 +227,60 @@ Item {
         border.width: 2.5 * root.s
       }
 
+      Shape {
+        visible: root.targeting && capArea.containsMouse && root.selected !== cap.modelData.position || drop.containsDrag
+        anchors.fill: parent
+        preferredRendererType: Shape.CurveRenderer
+
+        ShapePath {
+          fillColor: "transparent"
+          strokeColor: Theme.focus
+          strokeWidth: 1.2 * root.s
+          strokeStyle: ShapePath.DashLine
+          dashPattern: [4 / 1.2, 3 / 1.2]
+
+          PathRectangle {
+            x: 0
+            y: 0
+            width: cap.width
+            height: cap.height
+            radius: 10 * root.s
+          }
+        }
+      }
+
+      DropArea {
+        id: drop
+        anchors.fill: parent
+        keys: ["adv360"]
+        enabled: cap.modelData.position !== "smartset"
+        onDropped: function(event) { root.dropped(cap.modelData.position, event.source.payload) }
+      }
+
       MouseArea {
+        id: capArea
+
+        property point from
+        property bool dragging: false
+
         anchors.fill: parent
         enabled: cap.modelData.position !== "smartset"
+        hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.keyClicked(cap.modelData.position)
+        onPressed: function(mouse) { from = Qt.point(mouse.x, mouse.y); dragging = false }
+        onPositionChanged: function(mouse) {
+          if (!pressed || root.ghost === null) return
+          if (!dragging && Math.abs(mouse.x - from.x) + Math.abs(mouse.y - from.y) > 8) {
+            dragging = true
+            root.ghost.begin({ position: cap.modelData.position }, cap.legend.lines.join(" "))
+          }
+          if (dragging) root.ghost.follow(this, mouse.x, mouse.y)
+        }
+        onReleased: {
+          if (dragging) root.ghost.end()
+          else root.keyClicked(cap.modelData.position)
+          dragging = false
+        }
       }
     }
   }

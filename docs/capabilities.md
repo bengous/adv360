@@ -54,4 +54,4 @@ Other named errors: `bad-profile`, `layer-missing`, `no-base` (first edit with n
 
 ## Deferred to v2
 
-Presets (Dvorak, Colemak, Workman), Quick Thumb Keys (Mac / Linux / Windows modes), assigning by typing the physical key, `Save As` copy-to-profile (covered by `session load-file`), Export (covered by `backup`), firmware flashing, Advantage2, the MCP server, the Omarchy `panel` plugin.
+Presets (Dvorak, Colemak, Workman), Quick Thumb Keys (Mac / Linux / Windows modes), `Save As` copy-to-profile (covered by `session load-file`), Export (covered by `backup`), firmware flashing, Advantage2, the MCP server, the Omarchy `panel` plugin.
