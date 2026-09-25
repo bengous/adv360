@@ -8,6 +8,7 @@ import "assign.mjs" as Assign
 import "edits.mjs" as Edits
 import "macro.mjs" as Macro
 import "cycle.mjs" as Cycle
+import "led.mjs" as Led
 
 // The editor's state and every action on it: views bind to this object, clicks and the
 // adv360 IPC target call the same functions, and every change goes through the CLI.
@@ -46,6 +47,9 @@ ShellRoot {
   property string layerName: "base"
   property string mode: "keys"
   property string selected: ""
+  property string selectedLed: ""
+  // The layer colour the LED drawer edits; the top bar's layer by default.
+  property string ledLayer: "layd"
   property string drawer: "none"
   property bool capturing: false
   // Tap & hold draft: written once both slots hold an action.
@@ -229,7 +233,36 @@ ShellRoot {
   function closeDrawer() {
     capturing = false
     selected = ""
+    selectedLed = ""
     drawer = "none"
+  }
+
+  function selectLed(indicator) {
+    if (mode !== "lights") mode = "lights"
+    capturing = false
+    selected = ""
+    selectedLed = indicator
+    ledLayer = Led.LAYER_LEDS[layerName] || "layd"
+    drawer = indicator === "" ? "none" : "led"
+  }
+
+  function ledAt(indicator) {
+    return viewData && viewData.leds ? viewData.leds[indicator] || null : null
+  }
+
+  function setLedFunction(func) {
+    var led = ledAt(selectedLed)
+    if (led === null) return
+    act(Led.ledArgs(profile, selectedLed, func, Led.colorsFor(led, func, ledLayer)))
+  }
+
+  // key: the layer LED key (layd … lay3), or the function of a single-colour LED.
+  function setLedColor(key, hex) {
+    var led = ledAt(selectedLed)
+    if (led === null) return
+    var colors = Led.colorsFor(led, led.function, key)
+    colors[key] = Led.rgbOf(hex)
+    act(Led.ledArgs(profile, selectedLed, led.function, colors))
   }
 
   // "Write to keyboard" (H1): the review reads the keyboard's own lines to show what each change replaces.
@@ -379,6 +412,13 @@ ShellRoot {
     case "speed": setSpeed(Number(value)); break
     case "repeat": setRepeat(Number(value)); break
     case "cotrigger": setCotrigger(value); break
+    case "ledFunction": setLedFunction(value); break
+    case "ledColor":
+      var parts = String(value).split("=")
+      var led = ledAt(selectedLed)
+      if (parts.length === 2) setLedColor(Led.LAYER_LEDS[parts[0]] || parts[0], parts[1])
+      else if (led !== null) setLedColor(led.function, parts[0])
+      break
     default: message = "unknown field " + field
     }
   }
@@ -581,6 +621,7 @@ ShellRoot {
     function layer(name: string): void { shell.layerName = name }
     function mode(name: string): void { shell.mode = name }
     function select(position: string): void { shell.select(position) }
+    function selectLed(indicator: string): void { shell.selectLed(indicator) }
     function drawer(tab: string): void { shell.setTab(tab) }
     function slot(name: string): void { shell.slot = name }
     function assign(token: string): void { shell.assign(token) }

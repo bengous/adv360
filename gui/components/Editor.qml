@@ -69,24 +69,27 @@ Item {
           layerName: root.app.layerName
           selected: root.app.selected
           targeting: root.app.selected !== ""
+          lights: root.app.mode === "lights"
+          selectedLed: root.app.selectedLed
           glow: root.app.drawer === "reload" && root.app.cycle.kind === "reload" ? ["smartset", "hk4"] : []
           ghost: ghost
           onKeyClicked: function(position) { root.app.keyClicked(position) }
           onDropped: function(position, payload) { root.app.dropOn(position, payload) }
+          onLedClicked: function(indicator) { root.app.selectLed(indicator) }
         }
 
         Drawer {
           id: drawer
-          visible: root.app.mode === "keys" && root.app.drawer !== "none"
+          visible: root.app.drawer !== "none"
           Layout.fillWidth: true
-          Layout.preferredHeight: ({ one: 232, taphold: 280, macro: 316, review: 330, reload: 150 })[root.app.drawer] || 232
+          Layout.preferredHeight: ({ one: 232, taphold: 280, macro: 316, review: 330, reload: 150, led: 200 })[root.app.drawer] || 232
           app: root.app
           ghost: ghost
-          notchX: keyboardView.x + keyboardView.centerOf(root.app.selected).x - x
+          notchX: keyboardView.x + (root.app.drawer === "led" ? keyboardView.ledCenter(root.app.selectedLed) : keyboardView.centerOf(root.app.selected)).x - x
         }
 
         BottomPane {
-          visible: root.app.mode === "keys" && root.app.drawer === "none"
+          visible: root.app.drawer === "none"
           Layout.fillWidth: true
           Layout.fillHeight: false
           Layout.preferredHeight: 80
@@ -96,15 +99,6 @@ Item {
           onVerifyRequested: root.app.act(["verify"])
           onRestoreRequested: function(dir) { root.app.act(["restore", dir, "--profile", String(root.app.profile)]) }
         }
-      }
-
-      LightingSidebar {
-        visible: root.app.mode === "lights"
-        Layout.preferredWidth: 360
-        Layout.fillHeight: true
-        viewData: root.app.viewData
-        profile: root.app.profile
-        onAction: function(args) { root.app.act(args) }
       }
     }
 

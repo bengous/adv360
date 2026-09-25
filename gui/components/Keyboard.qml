@@ -22,6 +22,9 @@ Item {
   property var ghost: null
   // Keys the human must press now (SmartSet + Hotkey 4 after a write): they pulse, the rest dims.
   property var glow: []
+  // Lights mode: the keys fade, the LEDs grow and take the clicks.
+  property bool lights: false
+  property string selectedLed: ""
   readonly property var glowLabels: ({ smartset: "hold", hk4: "then press" })
 
   signal keyClicked(string position)
@@ -57,6 +60,15 @@ Item {
     for (var i = 0; i < placed.keys.length; i++) {
       var k = placed.keys[i]
       if (k.position === position) return Qt.point(ox + k.cx * unit, oy + k.cy * unit)
+    }
+    return Qt.point(width / 2, 0)
+  }
+
+  function ledCenter(indicator) {
+    if (placed === null) return Qt.point(0, 0)
+    for (var i = 0; i < placed.leds.length; i++) {
+      var l = placed.leds[i]
+      if (l.indicator === indicator) return Qt.point(ox + l.cx * unit, oy + l.cy * unit)
     }
     return Qt.point(width / 2, 0)
   }
@@ -122,7 +134,7 @@ Item {
       width: modelData.w * root.unit
       height: modelData.h * root.unit
       rotation: modelData.angle
-      opacity: root.glow.length > 0 && !glowing ? 0.3 : 1
+      opacity: root.lights ? 0.22 : root.glow.length > 0 && !glowing ? 0.3 : 1
       z: glowing ? 1 : 0
 
       Rectangle {
@@ -315,7 +327,7 @@ Item {
         property bool dragging: false
 
         anchors.fill: parent
-        enabled: cap.modelData.position !== "smartset"
+        enabled: cap.modelData.position !== "smartset" && !root.lights
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onPressed: function(mouse) { from = Qt.point(mouse.x, mouse.y); dragging = false }
@@ -347,12 +359,34 @@ Item {
 
       x: root.ox + modelData.cx * root.unit - width / 2
       y: root.oy + modelData.cy * root.unit - height / 2
-      width: 12 * root.s
+      z: 2
+      width: (root.lights ? 20 : 12) * root.s
       height: width
       radius: width / 2
       color: !look.lit ? Theme.ledOff : look.layer ? look.color : Theme.mix(look.color, Theme.ledOff, 0.3)
       border.width: 1.5 * root.s
       border.color: look.lit ? look.color : Theme.capBorder
+
+      Rectangle {
+        visible: root.lights && led.look.lit && led.look.layer
+        anchors.centerIn: parent
+        width: parent.width * 1.9
+        height: width
+        radius: width / 2
+        z: -1
+        color: Theme.alpha(led.look.color, 0.18)
+      }
+
+      Rectangle {
+        visible: root.selectedLed === led.modelData.indicator
+        anchors.centerIn: parent
+        width: parent.width + 10 * root.s
+        height: width
+        radius: width / 2
+        color: "transparent"
+        border.width: 2.5 * root.s
+        border.color: Theme.focus
+      }
 
       MouseArea {
         anchors.fill: parent

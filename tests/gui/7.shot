@@ -1,0 +1,16 @@
+# Slice 7: the LED drawer; a layer LED always sends its five colours.
+ipc mode lights
+shot lights
+ipc selectLed IND3
+ipc layer function1
+ipc selectLed IND3
+shot led
+expect state-led.json .mode == "lights" and .drawer == "led"
+ipc set ledColor function1=#00ffff
+shot led-cyan
+cli session status --profile 1
+expect cli-1.json .led.edits == [{"op": "set-led", "indicator": "IND3", "function": "layer", "colors": {"layd": [0, 0, 0], "layk": [255, 255, 255], "lay1": [0, 255, 255], "lay2": [0, 255, 0], "lay3": [255, 0, 0]}}]
+ipc selectLed IND1
+ipc set ledFunction layer
+cli session status --profile 1
+expect cli-2.json .led.edits[1] | .indicator == "IND1" and .function == "layer" and (.colors | length) == 5
