@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { parseMacroTokens } from "../model/txt/layout.ts";
-import { FIXTURES } from "../testkit.ts";
+import { FIXTURES, textAt } from "../testkit.ts";
 import { view } from "./view.ts";
 
 const keysOf = async (
@@ -75,5 +75,21 @@ describe("view on the keyboard mirror", () => {
       action: "defs",
       label: "Base Shift",
     });
+  });
+
+  test("given a base edit that shifts later lines, when viewing fn1, then no key is pending", async () => {
+    const baseText = await textAt(FIXTURES, "layouts/layout1.txt");
+
+    const report = await view(FIXTURES, 1, "function1", {
+      profile: 1,
+      layout: {
+        baseText,
+        edits: [
+          { op: "set-remap", layer: "base", position: "caps", action: "esc" },
+        ],
+      },
+    });
+
+    expect(report.keys.filter((k) => k.pending)).toEqual([]);
   });
 });

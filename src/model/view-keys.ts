@@ -116,15 +116,31 @@ export function layerKeys(text: string, layer: LayerName): ViewKey[] {
   return keyboard.keys.map(({ position }) => keyOf(effective, layer, position));
 }
 
+// An edit above a key moves its line number: pending compares what the key does, not where.
+function effectOf(key: ViewKey | undefined): string {
+  if (key === undefined) {
+    return "";
+  }
+
+  const macros = key.macros.map((m) => [m.cotrigger, m.tokens]);
+
+  switch (key.kind) {
+    case "default":
+    case "remap":
+      return JSON.stringify([key.kind, key.action, macros]);
+    case "taphold":
+      return JSON.stringify([key.kind, key.tap, key.ms, key.hold, macros]);
+    default:
+      return key satisfies never;
+  }
+}
+
 // With a session, keys show the pending render; `pending` marks the ones that differ from the disk.
 export function overlay(onDisk: ViewKey[], shown: ViewKey[]): PendingKey[] {
   const keys: PendingKey[] = [];
 
   for (const [i, key] of shown.entries()) {
-    keys.push({
-      ...key,
-      pending: JSON.stringify(key) !== JSON.stringify(onDisk[i]),
-    });
+    keys.push({ ...key, pending: effectOf(key) !== effectOf(onDisk[i]) });
   }
 
   return keys;
