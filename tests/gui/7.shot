@@ -14,3 +14,7 @@ ipc selectLed IND1
 ipc set ledFunction layer
 cli session status --profile 1
 expect cli-2.json .led.edits[1] | .indicator == "IND1" and .function == "layer" and (.colors | length) == 5
+# Clicking the function an LED already has writes nothing.
+ipc selectLed IND3
+ipc set ledFunction layer
+expect calls.log [split("\n")[] | select(startswith("session set-led"))] | length == 2

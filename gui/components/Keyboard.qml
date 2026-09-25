@@ -344,6 +344,10 @@ Item {
           else root.keyClicked(cap.modelData.position)
           dragging = false
         }
+        onCanceled: {
+          if (dragging) root.ghost.cancel()
+          dragging = false
+        }
       }
     }
   }

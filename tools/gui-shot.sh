@@ -98,14 +98,15 @@ guard() {
   [ "$stray" = "[]" ] || die 2 "quickshell $pid has layers off $OUTPUT: $stray"
 }
 
+# Quickshell leads its own process group (setsid): the group holds it and the CLI calls it runs.
 cleanup() {
   if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-    kill "$pid"
+    kill -- -"$pid" 2>/dev/null || true
     for _ in $(seq 20); do
       kill -0 "$pid" 2>/dev/null || break
       sleep 0.1
     done
-    kill -9 "$pid" 2>/dev/null || true
+    ! kill -0 "$pid" 2>/dev/null || kill -9 -- -"$pid" 2>/dev/null || true
   fi
   wait 2>/dev/null || true
   [ -z "$tmp" ] || rm -rf -- "$tmp"
@@ -140,7 +141,7 @@ launch() {
   ADV360_SCREEN="$OUTPUT" \
     ADV360_CMD="$(jq -cn --arg c "$repo/tools/gui-cli.sh" '[$c]')" \
     ADV360_SHOT_OUT="$out" \
-    quickshell -p "$repo/gui" >"$out/quickshell.log" 2>&1 &
+    setsid quickshell -p "$repo/gui" >"$out/quickshell.log" 2>&1 &
   pid=$!
   wait_ready
   wait_idle
@@ -220,7 +221,8 @@ script="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
 script_dir="$(dirname "$script")"
 [ -f "$script" ] || die 64 "no script at $2"
 
-exec 9>"${XDG_RUNTIME_DIR:?}/adv360-shot.lock"
+# One run at a time on the shared output; the lock is the script itself, so nothing is written.
+exec 9<"${BASH_SOURCE[0]}"
 flock -w 300 9 || die 1 "another gui-shot.sh run holds the lock"
 
 trap cleanup EXIT

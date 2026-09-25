@@ -24,3 +24,10 @@ expect cli-1.json [.keys[] | select(.position == "a")][0] | .kind == "taphold" a
 expect cli-1.json [.keys[] | select(.position == "h")][0].macros | length == 1 and .[0].cotrigger == "lctr" and .[0].tokens == ["s5", "-lshf", "h", "+lshf", "i"]
 cli session status --profile 1
 expect cli-2.json [.layout.edits[] | select(.op == "set-macro")] | length >= 1
+# The × of the H chip resets the macro draft: the next step writes one macro, not a second one.
+ipc remove 1
+ipc select h
+ipc drawer macro
+ipc assign a
+cli view --profile 1 --layer base
+expect cli-3.json [.keys[] | select(.position == "h")][0].macros | length == 1 and .[0].cotrigger == null and .[0].tokens == ["a"]

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -96,7 +98,7 @@ ShellRoot {
     if (cycle.kind !== cycleKind) {
       cycleKind = cycle.kind
       // Edits are refused until the write is verified: the reload drawer takes over.
-      if (cycleKind === "reload" || cycleKind === "verify" || cycleKind === "broken") {
+      if (cycleKind === "write" || cycleKind === "reload" || cycleKind === "verify" || cycleKind === "broken") {
         capturing = false
         selected = ""
         drawer = "reload"
@@ -254,7 +256,7 @@ ShellRoot {
 
   function setLedFunction(func) {
     var led = ledAt(selectedLed)
-    if (led === null) return
+    if (led === null || led.function === func) return
     act(Led.ledArgs(profile, selectedLed, func, Led.colorsFor(led, func, ledLayer)))
   }
 
@@ -263,7 +265,9 @@ ShellRoot {
     var led = ledAt(selectedLed)
     if (led === null) return
     var colors = Led.colorsFor(led, led.function, key)
-    colors[key] = Led.rgbOf(hex)
+    var rgb = Led.rgbOf(hex)
+    if (Led.hexOf(colors[key]) === Led.hexOf(rgb)) return
+    colors[key] = rgb
     act(Led.ledArgs(profile, selectedLed, led.function, colors))
   }
 
@@ -285,7 +289,22 @@ ShellRoot {
       message = "nothing to write on profile " + profile
       return
     }
-    run(["apply", "--profile", String(profile)], function(code, lines) {
+    apply(profile)
+  }
+
+  // A write whose eject failed stays `written`: apply again retries only the eject.
+  function retryEject() {
+    var record = status !== null ? status.pending_write : null
+    if (record !== null && record.phase.kind === "written") apply(record.profile)
+  }
+
+  function verifyAgain() {
+    verifiedFor = ""
+    if (cycle.kind === "verify") autoVerify()
+  }
+
+  function apply(which) {
+    run(["apply", "--profile", String(which)], function(code, lines) {
       var report = lines.length > 0 ? lines[lines.length - 1] : null
       last = { verb: "apply", code: code, report: report }
       if (code !== 0) {
@@ -297,7 +316,7 @@ ShellRoot {
           selected = ""
           drawer = "reload"
         } else {
-          note = "Written to profile " + profile + " and read back."
+          note = "Written to profile " + which + " and read back."
           closeDrawer()
         }
       }
@@ -394,7 +413,9 @@ ShellRoot {
   }
 
   function setCotrigger(value) {
-    cotrigger = value === "" || value === "none" ? null : value
+    var next = value === "" || value === "none" ? null : value
+    if (next === cotrigger) return
+    cotrigger = next
     if (strip.length > 0 || macroWritten) writeMacro()
   }
 
@@ -425,7 +446,14 @@ ShellRoot {
     }
   }
 
+  // Dropped on the key the drawer edits, an action lands where a click would put it.
   function dropOn(target, payload) {
+    if (payload.position === target) return
+    if (target === selected && (drawer === "taphold" || drawer === "macro")) {
+      if (payload.token !== undefined) assign(payload.token)
+      else copyFrom(payload.position)
+      return
+    }
     if (payload.token !== undefined) {
       act(["session", "set-remap"].concat(where(), ["--pos", target, "--action", payload.token]))
       return
@@ -436,7 +464,6 @@ ShellRoot {
     else act(args)
   }
 
-  // Back to the factory action; in the macro tab, the macro goes.
   function autoVerify() {
     var record = status !== null ? status.pending_write : null
     if (record === null || record.started_at === verifiedFor) return
@@ -453,53 +480,38 @@ ShellRoot {
     })
   }
 
-  // Opens a session that puts the backup's files back; Write then makes it real.
-  function restore(backupDir) {
+  // Opens a session that puts the backup's files back on `which`; Write then makes it real.
+  function restore(backupDir, which) {
     closeDrawer()
-    act(["restore", backupDir, "--profile", String(profile)])
+    if (which !== profile) profile = which
+    act(["restore", backupDir, "--profile", String(which)])
   }
 
+  // Back to the factory action; in the macro tab, the macro goes.
   function reset() {
     if (selected === "") return
     if (drawer === "macro") setStrip([])
-    else act(["session", "remove"].concat(where(), ["--pos", selected]))
+    else actAll([["session", "remove"].concat(where(), ["--pos", selected])], true)
   }
 
   function discardAll() {
-    act(["session", "discard", "--profile", String(profile)])
+    actAll([["session", "discard", "--profile", String(profile)]], true)
   }
 
   // The × of a change (H7): discard the session, then record every other edit again, in order.
+  // The first edit of a replay reads the disk, so the v-Drive must be open.
   function removeEdits(indices) {
-    var calls = []
+    if (!mounted || busy) {
+      message = mounted ? "wait for the last change to finish" : "open the v-Drive to remove one change; Discard all works without it"
+      return
+    }
+    var calls = [["session", "discard", "--profile", String(profile)]]
     for (var i = 0; i < edits.length; i++) if (indices.indexOf(i) < 0) calls.push(Edits.editArgs(edits[i], profile))
     if (calls.indexOf(null) >= 0) {
       message = "a restored file cannot be replayed: use Discard all"
       return
     }
-    run(["session", "discard", "--profile", String(profile)], function(code, lines) {
-      if (code !== 0) failed("session discard", code, lines)
-      else replay(calls, 0)
-    })
-  }
-
-  function replay(calls, i) {
-    if (i >= calls.length) {
-      message = ""
-      refresh()
-      return
-    }
-    run(calls[i], function(code, lines) {
-      if (code !== 0) failed(calls[i].slice(0, 2).join(" "), code, lines)
-      else replay(calls, i + 1)
-    })
-  }
-
-  function failed(verb, code, lines) {
-    var report = lines.length > 0 ? lines[lines.length - 1] : null
-    last = { verb: verb, code: code, report: report }
-    message = report && report.message ? String(report.message) : verb + " exited " + code
-    refresh()
+    actAll(calls, true)
   }
 
   function parseLines(text) {
@@ -512,13 +524,15 @@ ShellRoot {
     return out
   }
 
-  function run(args, callback) {
-    queue = queue.concat([{ args: args, callback: callback }])
+  function run(args, callback, batch) {
+    queue = queue.concat([{ args: args, callback: callback, batch: batch || null }])
     pump()
   }
 
   function pump() {
-    if (cliProcess.running || current !== null || queue.length === 0) return
+    if (cliProcess.running || current !== null) return
+    while (queue.length > 0 && queue[0].batch !== null && queue[0].batch.aborted) queue = queue.slice(1)
+    if (queue.length === 0) return
     current = queue[0]
     queue = queue.slice(1)
     cliProcess.command = (cliCommand.length > 0 ? cliCommand : ["adv360"]).concat(current.args)
@@ -530,23 +544,27 @@ ShellRoot {
     actAll([args])
   }
 
-  // Mutations in order; the first failure stops the rest and shows its message.
-  function actAll(calls) {
+  // Mutations queued at once, so a second click lands after them; the first failure drops the
+  // rest and shows its message. `reload` re-reads the drafts once the window has re-read the key.
+  function actAll(calls, reload) {
     if (calls.length === 0) return
-    var args = calls[0]
-    run(args, function(code, lines) {
-      var report = lines.length > 0 ? lines[lines.length - 1] : null
-      last = { verb: args[0] === "session" || args[0] === "vdrive" ? args[0] + " " + args[1] : args[0], code: code, report: report }
-      message = code === 0 ? "" : (report && report.message ? String(report.message) : "adv360 exited " + code)
-      note = ""
-      if (code === 0 && calls.length > 1) actAll(calls.slice(1))
-      else refresh()
+    var batch = { aborted: false }
+    calls.forEach(function(args, i) {
+      run(args, function(code, lines) {
+        var report = lines.length > 0 ? lines[lines.length - 1] : null
+        last = { verb: args[0] === "session" || args[0] === "vdrive" ? args[0] + " " + args[1] : args[0], code: code, report: report }
+        message = code === 0 ? "" : (report && report.message ? String(report.message) : "adv360 exited " + code)
+        note = ""
+        if (code !== 0) batch.aborted = true
+        if (code !== 0 || i === calls.length - 1) refresh(reload === true)
+      }, batch)
     })
   }
 
-  function refresh() {
+  function refresh(reload) {
     run(["view", "--profile", String(profile), "--layer", layerName], function(code, lines) {
       viewData = code === 0 && lines.length > 0 ? lines[0] : null
+      if (reload === true && selected !== "") loadDrafts()
     })
     run(["session", "status", "--profile", String(profile)], function(code, lines) {
       session = lines.length > 0 ? lines[0] : null

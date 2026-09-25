@@ -140,6 +140,10 @@ ColumnLayout {
               else root.app.assign(tile.modelData.token)
               dragging = false
             }
+            onCanceled: {
+              if (dragging) root.ghost.cancel()
+              dragging = false
+            }
           }
         }
       }

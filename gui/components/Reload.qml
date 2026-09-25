@@ -14,15 +14,20 @@ RowLayout {
 
   readonly property string kind: app.cycle.kind
   readonly property var verdict: app.verifyResult
+  readonly property var record: app.status !== null ? app.status.pending_write : null
+  // The profile of the write, which need not be the one the window shows.
+  readonly property int written: record !== null ? record.profile : app.last !== null && app.last.report !== null && app.last.report.profile ? app.last.report.profile : app.profile
+  readonly property bool stuck: kind === "write" && record !== null && record.phase.kind === "written"
   readonly property string backupDir: {
-    var record = app.status !== null ? app.status.pending_write : null
     if (record !== null) return record.backup_dir
     return app.last !== null && app.last.report !== null && app.last.report.backup_dir ? app.last.report.backup_dir : ""
   }
   readonly property string title: {
-    if (kind === "broken") return "The last write failed. Restore the backup before using the keyboard."
-    if (kind === "reload") return "Written to profile " + app.profile + ". The v-Drive is ejected."
-    if (verdict === null) return kind === "verify" ? "The v-Drive is back: checking the files…" : "Written to profile " + app.profile + "."
+    if (kind === "broken") return "The last write to profile " + written + " failed. Restore the backup before using the keyboard."
+    if (stuck) return "Written to profile " + written + ", but the v-Drive did not eject: close what uses it, then retry."
+    if (kind === "write") return "Writing profile " + written + "…"
+    if (kind === "reload") return "Written to profile " + written + ". The v-Drive is ejected."
+    if (verdict === null) return kind === "verify" ? "The v-Drive is back: checking the files…" : "Written to profile " + written + "."
     if (verdict.code !== 0) return "Verify failed: " + (verdict.report && verdict.report.message ? verdict.report.message : "adv360 verify exited " + verdict.code)
     switch (verdict.report.result) {
     case "verified": return "Profile " + verdict.report.profile + " verified: the keyboard reads what adv360 wrote."
@@ -137,8 +142,25 @@ RowLayout {
         small: true
         text: "Restore"
         enabled: root.app.mounted
-        onClicked: root.app.restore(root.backupDir)
+        onClicked: root.app.restore(root.backupDir, root.written)
       }
+    }
+
+    Btn {
+      visible: root.stuck
+      Layout.alignment: Qt.AlignRight
+      text: "Retry eject"
+      primary: true
+      enabled: !root.app.busy
+      onClicked: root.app.retryEject()
+    }
+
+    Btn {
+      visible: root.kind === "verify" && root.verdict !== null && root.verdict.code !== 0
+      Layout.alignment: Qt.AlignRight
+      text: "Verify again"
+      enabled: !root.app.busy
+      onClicked: root.app.verifyAgain()
     }
 
     Btn {

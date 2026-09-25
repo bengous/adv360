@@ -138,5 +138,10 @@ Item {
       Drag.drop()
       Drag.active = false
     }
+
+    function cancel() {
+      Drag.cancel()
+      Drag.active = false
+    }
   }
 }

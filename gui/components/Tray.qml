@@ -121,6 +121,7 @@ Rectangle {
 
               Text {
                 anchors.verticalCenter: parent.verticalCenter
+                visible: root.app.mounted
                 text: "×"
                 color: removeArea.containsMouse ? Theme.text : Theme.dim
                 font.family: Theme.font
@@ -131,6 +132,7 @@ Rectangle {
                   anchors.fill: parent
                   anchors.margins: -5
                   hoverEnabled: true
+                  enabled: !root.app.busy
                   cursorShape: Qt.PointingHandCursor
                   onClicked: root.app.removeEdits(chip.modelData.indices)
                 }

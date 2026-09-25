@@ -17,6 +17,11 @@ describe("tokenForKey", () => {
     [0x3f, 61, "?", "fsls"],
     [0x5c, 51, "\\", "bsls"],
     [0x20, 65, " ", "spc"],
+    [0x2a, 63, "*", "kp*"],
+    [0x2b, 86, "+", "kp+"],
+    [0x31, 87, "1", "kp1"],
+    [0x01000010, 79, "", "kp7"],
+    [0x01000005, 104, "\r", "kpen"],
   ])(
     "given Qt key %p (scancode %p, text %p), then the token is %p",
     (key, scan, text, token) => {

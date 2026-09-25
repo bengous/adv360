@@ -236,7 +236,7 @@ Rectangle {
               enabled: root.app.mounted
               onPicked: {
                 root.app.menu = ""
-                root.app.restore(root.app.status.stateDir + "/backups/" + modelData)
+                root.app.restore(root.app.status.stateDir + "/backups/" + modelData, root.app.profile)
               }
             }
           }

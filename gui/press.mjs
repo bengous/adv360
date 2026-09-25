@@ -43,6 +43,29 @@ const NAMED = {
   0x01000055: "app",
 };
 
+// XKB keycodes (evdev + 8) of the keypad: its keys type the same text as the main block,
+// and with Num Lock off they send navigation keys.
+/** @type {Record<number, string>} */
+const KEYPAD_SCANCODES = {
+  79: "kp7",
+  80: "kp8",
+  81: "kp9",
+  82: "kp-",
+  83: "kp4",
+  84: "kp5",
+  85: "kp6",
+  86: "kp+",
+  87: "kp1",
+  88: "kp2",
+  89: "kp3",
+  90: "kp0",
+  91: "kp.",
+  104: "kpen",
+  106: "kp/",
+  63: "kp*",
+  125: "kp=",
+};
+
 // XKB keycodes (evdev + 8): the only way to tell a left modifier from a right one.
 /** @type {Record<number, string>} */
 const MODIFIER_SCANCODES = {
@@ -111,6 +134,12 @@ const PRINTABLE = {
  * @returns {string | null}
  */
 export function tokenForKey(qtKey, nativeScanCode, text) {
+  const keypad = KEYPAD_SCANCODES[nativeScanCode];
+
+  if (keypad !== undefined) {
+    return keypad;
+  }
+
   if (qtKey >= QT.f1 && qtKey <= QT.f24) {
     return `f${qtKey - QT.f1 + 1}`;
   }
