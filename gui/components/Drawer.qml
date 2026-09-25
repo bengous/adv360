@@ -56,7 +56,7 @@ Item {
       spacing: 12
 
       Text {
-        text: root.app.nameOf(root.app.selected)
+        text: (root.app.drawer === "macro" && root.app.cotrigger !== null ? root.app.labelOf(root.app.cotrigger).replace(/^(Left|Right) /, "") + " + " : "") + root.app.nameOf(root.app.selected)
         color: Theme.text
         font.family: Theme.font
         font.pixelSize: Theme.title
@@ -71,8 +71,7 @@ Item {
       }
 
       Text {
-        visible: root.app.drawer === "one"
-        text: "sends"
+        text: root.app.drawer === "one" ? "sends" : root.app.drawer === "taphold" ? "tap and hold" : "plays a macro"
         color: Theme.dim
         font.family: Theme.font
         font.pixelSize: 12
@@ -111,9 +110,9 @@ Item {
       Item { Layout.fillWidth: true }
 
       Segmented {
-        options: [{ value: "one", label: "One action" }]
+        options: [{ value: "one", label: "One action" }, { value: "taphold", label: "Tap & hold" }, { value: "macro", label: "Macro" }]
         value: root.app.drawer
-        onPicked: function(v) { root.app.drawer = v }
+        onPicked: function(v) { root.app.setTab(v) }
       }
 
       Btn {
@@ -124,7 +123,7 @@ Item {
 
       Btn {
         text: "Reset"
-        enabled: root.key !== null && root.key.kind !== "default"
+        enabled: root.app.drawer === "macro" ? root.app.macroWritten : root.key !== null && root.key.kind !== "default"
         onClicked: root.app.reset()
       }
 
@@ -152,6 +151,22 @@ Item {
       app: root.app
       ghost: root.ghost
       current: root.currentAction
+    }
+
+    TapHold {
+      visible: root.app.drawer === "taphold"
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      app: root.app
+      ghost: root.ghost
+    }
+
+    Macro {
+      visible: root.app.drawer === "macro"
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      app: root.app
+      ghost: root.ghost
     }
   }
 }

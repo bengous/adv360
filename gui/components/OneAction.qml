@@ -12,6 +12,7 @@ ColumnLayout {
   required property var app
   property var ghost: null
   property string current: ""
+  property string fallback: "Special Actions"
   property string picked: ""
 
   readonly property var shortNames: ({
@@ -36,7 +37,7 @@ ColumnLayout {
       var names = Object.keys(categories[i].tokens)
       for (var j = 0; j < names.length; j++) if (names[j].toLowerCase() === wanted) return categories[i].name
     }
-    return "Special Actions"
+    return fallback
   }
 
   spacing: 8

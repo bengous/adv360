@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 import "../controls"
+import "../macro.mjs" as MacroStrip
 
 // The unwritten changes of the profile, one chip each, and the two ways out: discard or write.
 Rectangle {
@@ -26,7 +27,7 @@ Rectangle {
     case "set-taphold":
       return { subject: layerPrefix(edit.layer) + app.nameOf(edit.position) + " → " + app.labelOf(edit.tap) + ", hold", value: app.labelOf(edit.hold), kind: app.known(edit.tap) && app.known(edit.hold) ? "taphold" : "bad" }
     case "set-macro":
-      return { subject: layerPrefix(edit.layer) + (edit.cotrigger ? app.labelOf(edit.cotrigger) + " + " : "") + app.nameOf(edit.trigger) + " → plays", value: edit.tokens.length + " steps", kind: "macro" }
+      return { subject: layerPrefix(edit.layer) + (edit.cotrigger ? app.labelOf(edit.cotrigger).replace(/^(Left|Right) /, "") + " + " : "") + app.nameOf(edit.trigger) + " → types", value: MacroStrip.macroPreview(MacroStrip.stripOf(edit.tokens).strip), kind: "" }
     case "remove":
       return { subject: layerPrefix(edit.layer) + app.nameOf(edit.position) + " →", value: "factory", kind: "" }
     case "remove-macro":
@@ -58,7 +59,7 @@ Rectangle {
     spacing: 10
 
     Text {
-      text: root.app.pending === 0 ? "Nothing to write" : "Not written:"
+      text: root.app.changes.length === 0 ? "Nothing to write" : "Not written:"
       color: Theme.dim
       font.family: Theme.font
       font.pixelSize: 12
@@ -77,14 +78,13 @@ Rectangle {
         spacing: 8
 
         Repeater {
-          model: root.app.edits
+          model: root.app.changes
 
           Rectangle {
             id: chip
 
             required property var modelData
-            required property int index
-            readonly property var look: root.chipOf(modelData)
+            readonly property var look: root.chipOf(modelData.show)
 
             implicitWidth: chipRow.implicitWidth + 18
             implicitHeight: 32
@@ -125,7 +125,7 @@ Rectangle {
                   anchors.margins: -5
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
-                  onClicked: root.app.removeEdit(chip.index)
+                  onClicked: root.app.removeEdits(chip.modelData.indices)
                 }
               }
             }

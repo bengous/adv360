@@ -124,3 +124,88 @@ export function editArgs(edit, profile) {
     ? null
     : ["session", verb, "--profile", String(profile), ...flags];
 }
+
+/**
+ * @param {Edit} edit
+ * @param {number} index
+ */
+function groupOf(edit, index) {
+  switch (edit.op) {
+    case "set-remap":
+    case "set-taphold":
+    case "remove":
+      return `${edit.layer}:${edit.position}`;
+    case "set-macro":
+    case "remove-macro":
+      return `${edit.layer}:${edit.trigger}`;
+    case "set-led":
+      return `led:${edit.indicator}`;
+    case "replace-file":
+      return `file:${index}`;
+    default: {
+      /** @type {never} */
+      const unknown = edit;
+
+      throw new Error(`unknown edit ${JSON.stringify(unknown)}`);
+    }
+  }
+}
+
+/**
+ * The edit that says what a key does after all of its edits: its action if set, else a
+ * macro still standing, else the reset or removal that came last.
+ * @param {[Edit, ...Edit[]]} group
+ * @returns {Edit}
+ */
+function shown(group) {
+  const actions = group.filter(
+    (e) => e.op === "set-remap" || e.op === "set-taphold" || e.op === "remove",
+  );
+
+  const action = actions[actions.length - 1];
+
+  if (action !== undefined && action.op !== "remove") {
+    return action;
+  }
+
+  /** @type {Map<string, Edit>} */
+  const macros = new Map();
+
+  for (const e of group) {
+    if (e.op === "set-macro" || e.op === "remove-macro") {
+      macros.set(String(e.cotrigger), e);
+    }
+  }
+
+  const standing = [...macros.values()].filter((e) => e.op === "set-macro");
+
+  return standing[standing.length - 1] ?? action ?? group[0];
+}
+
+/**
+ * One change per key or LED, in the order it was first edited: the indices of all its edits
+ * (what a chip's × removes) and the edit that describes it now.
+ * @param {readonly Edit[]} edits
+ * @returns {{ indices: number[], show: Edit }[]}
+ */
+export function changes(edits) {
+  /** @type {Map<string, { indices: number[], group: [Edit, ...Edit[]] }>} */
+  const groups = new Map();
+
+  for (const [i, edit] of edits.entries()) {
+    const id = groupOf(edit, i);
+    const found = groups.get(id);
+
+    if (found === undefined) {
+      groups.set(id, { indices: [i], group: [edit] });
+    } else {
+      found.indices.push(i);
+      found.group.push(edit);
+    }
+  }
+
+  return [...groups.values()].map(({ indices, group }) => ({
+    indices,
+    show: shown(group),
+  }));
+}

@@ -1,0 +1,26 @@
+# Slice 4: a tap & hold on A, then the audit's macro on H, first with no co-trigger, then on Left Ctrl.
+ipc select a
+ipc drawer taphold
+shot taphold-empty
+expect state-taphold-empty.json .drawer == "taphold"
+ipc slot hold
+ipc assign lctr
+ipc set delay 200
+shot taphold
+ipc select h
+ipc drawer macro
+ipc set speed 5
+ipc slot tap
+ipc assign -lshf
+ipc assign h
+ipc assign +lshf
+ipc assign i
+shot macro-plain
+expect calls.log test("session set-macro --profile 1 --layer base --trigger h --tokens")
+ipc set cotrigger lctr
+shot macro
+cli view --profile 1 --layer base
+expect cli-1.json [.keys[] | select(.position == "a")][0] | .kind == "taphold" and .tap == "a" and .hold == "lctr" and .ms == 200
+expect cli-1.json [.keys[] | select(.position == "h")][0].macros | length == 1 and .[0].cotrigger == "lctr" and .[0].tokens == ["s5", "-lshf", "h", "+lshf", "i"]
+cli session status --profile 1
+expect cli-2.json [.layout.edits[] | select(.op == "set-macro")] | length >= 1

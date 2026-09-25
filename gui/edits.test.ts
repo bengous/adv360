@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { editArgs } from "./edits.mjs";
+import { changes, editArgs } from "./edits.mjs";
 
 describe("editArgs", () => {
   test.each([
@@ -57,5 +57,60 @@ describe("editArgs", () => {
 
   test("given a restored file, then it cannot be replayed from flags", () => {
     expect(editArgs({ op: "replace-file", text: "<base>\r\n" }, 1)).toBeNull();
+  });
+});
+
+const macro = (cotrigger: string | null, tokens: string[]) =>
+  ({
+    op: "set-macro",
+    layer: "base",
+    trigger: "h",
+    cotrigger,
+    tokens,
+  }) as const;
+
+describe("changes", () => {
+  test("given four writes of one macro, then one change shows the last", () => {
+    const edits = [
+      macro(null, ["a"]),
+      macro(null, ["a", "b"]),
+      macro(null, ["a", "b", "c"]),
+    ];
+
+    expect(changes(edits)).toEqual([{ indices: [0, 1, 2], show: edits[2]! }]);
+  });
+
+  test("given a co-trigger moved from none to Ctrl, then the change shows the Ctrl macro", () => {
+    const moved = macro("lctr", ["h", "i"]);
+
+    const edits = [
+      macro(null, ["h", "i"]),
+      {
+        op: "remove-macro",
+        layer: "base",
+        trigger: "h",
+        cotrigger: null,
+      } as const,
+      moved,
+    ];
+
+    expect(changes(edits)).toEqual([{ indices: [0, 1, 2], show: moved }]);
+  });
+
+  test("given edits on two keys and one LED, then each gets its own change in first-edit order", () => {
+    const edits = [
+      { op: "set-remap", layer: "base", position: "caps", action: "esc" },
+      {
+        op: "set-led",
+        indicator: "IND3",
+        function: "caps",
+        colors: { caps: [1, 2, 3] },
+      },
+      { op: "set-remap", layer: "function1", position: "caps", action: "f1" },
+      { op: "remove", layer: "base", position: "caps" },
+    ] as const;
+
+    expect(changes(edits).map((c) => c.indices)).toEqual([[0, 3], [1], [2]]);
+    expect(changes(edits)[0]!.show).toEqual(edits[3]);
   });
 });

@@ -110,7 +110,7 @@ cleanup() {
 }
 
 ipc() {
-  quickshell ipc --pid "$pid" call adv360 "$@"
+  quickshell ipc --pid "$pid" call -- adv360 "$@"
 }
 
 state_json() {

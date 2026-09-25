@@ -77,7 +77,7 @@ Item {
           id: drawer
           visible: root.app.mode === "keys" && root.app.drawer !== "none"
           Layout.fillWidth: true
-          Layout.preferredHeight: 232
+          Layout.preferredHeight: root.app.drawer === "one" ? 232 : root.app.drawer === "taphold" ? 280 : 316
           app: root.app
           ghost: ghost
           notchX: keyboardView.x + keyboardView.centerOf(root.app.selected).x - x
@@ -100,18 +100,6 @@ Item {
           onVerifyRequested: root.app.act(["verify"])
           onRestoreRequested: function(dir) { root.app.act(["restore", dir, "--profile", String(root.app.profile)]) }
         }
-      }
-
-      Sidebar {
-        visible: root.app.mode === "keys" && root.app.selected !== ""
-        Layout.preferredWidth: 320
-        Layout.fillHeight: true
-        tokens: root.app.tokens
-        viewData: root.app.viewData
-        selected: root.app.selected
-        profile: root.app.profile
-        layerName: root.app.layerName
-        onAction: function(args) { root.app.act(args) }
       }
 
       LightingSidebar {
