@@ -1,0 +1,8 @@
+# Slice 0: the GUI draws on the virtual screen and answers the IPC.
+shot start
+expect state-start.json .profile == 1 and .layer == "base" and .busy == false
+ipc layer function1
+ipc profile 2
+shot profile2-fn1
+expect state-profile2-fn1.json .profile == 2 and .layer == "function1"
+expect calls.log test("view --profile 2 --layer function1")

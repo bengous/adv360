@@ -31,6 +31,7 @@ Native Omarchy editor for the Kinesis Advantage360 (SmartSet engine) v-Drive: on
 ## Workflow
 
 - Gate: `bun run check` before every commit. One test file: `bun test src/<name>.test.ts`.
+- Never run `adv360 gui` or `quickshell` on the user's session: every visual check goes through `tools/gui-shot.sh`, which draws on a headless output (`tests/gui/*.shot`).
 
 ## Style
 
