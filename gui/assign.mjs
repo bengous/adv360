@@ -98,3 +98,33 @@ export function copyArgs(source, target, layer, profile) {
     ? null
     : ["session", "set-remap", ...at, "--action", source.action];
 }
+
+/**
+ * The keys of a layer as the factory sets them, shaped like the keys of `adv360 view`:
+ * what the drawn keyboard shows while the v-Drive is closed and `view` cannot read it.
+ * @param {{ keys: readonly { position: string }[], defaults: Record<string, Record<string, string>> }} keyboard
+ * @param {Record<string, string>} labelMap
+ * @param {string} layer
+ */
+export function factoryKeys(keyboard, labelMap, layer) {
+  const layerDefaults = keyboard.defaults[layer] ?? {};
+
+  return keyboard.keys.map(({ position }) => {
+    const action =
+      layerDefaults[position] ?? keyboard.defaults["base"]?.[position] ?? null;
+
+    const label =
+      action === null || action === ""
+        ? ""
+        : (labelMap[action.toLowerCase()] ?? action);
+
+    return {
+      position,
+      kind: /** @type {const} */ ("default"),
+      action,
+      label,
+      macros: /** @type {ViewMacro[]} */ ([]),
+      pending: false,
+    };
+  });
+}

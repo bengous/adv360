@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import keyboard from "../data/keyboard.json";
 import tokens from "../data/tokens.json";
-import { copyArgs, isKnown, keyName, labels } from "./assign.mjs";
+import { copyArgs, factoryKeys, isKnown, keyName, labels } from "./assign.mjs";
 
 describe("labels", () => {
   test("given tokens.json, then each token maps to its SmartSet label", () => {
@@ -112,5 +112,50 @@ describe("copyArgs", () => {
         1,
       ),
     ).toBeNull();
+  });
+});
+
+describe("factoryKeys", () => {
+  test("given function1, then each key shows its layer default, else the base one, else nothing", () => {
+    const keys = factoryKeys(keyboard, labels(tokens), "function1");
+
+    const shown = keys.filter((k) =>
+      ["eql", "hk1", "caps"].includes(k.position),
+    );
+
+    expect(shown).toEqual([
+      {
+        position: "eql",
+        kind: "default",
+        action: "f1",
+        label: "F1",
+        macros: [],
+        pending: false,
+      },
+      {
+        position: "hk1",
+        kind: "default",
+        action: null,
+        label: "",
+        macros: [],
+        pending: false,
+      },
+      {
+        position: "caps",
+        kind: "default",
+        action: "caps",
+        label: "Caps Lock",
+        macros: [],
+        pending: false,
+      },
+    ]);
+  });
+
+  test("given a layer, then every key of the keyboard is drawn", () => {
+    const keys = factoryKeys(keyboard, labels(tokens), "keypad");
+
+    expect(keys.map((k) => k.position)).toEqual(
+      keyboard.keys.map((k) => k.position),
+    );
   });
 });

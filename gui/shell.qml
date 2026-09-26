@@ -80,6 +80,7 @@ ShellRoot {
   property var current: null
 
   readonly property bool mounted: status !== null && status.state === "mounted"
+  readonly property string closedHint: "open the v-Drive first: SmartSet + Hotkey 3"
   readonly property bool busy: current !== null || queue.length > 0
   readonly property string sessionState: session === null ? "clean" : String(session.state)
   readonly property var selectedKey: keyAt(selected)
@@ -197,6 +198,10 @@ ShellRoot {
   }
 
   function select(position) {
+    if (position !== "" && !mounted) {
+      message = closedHint
+      return
+    }
     capturing = false
     selected = position
     drawer = position === "" ? "none" : tabFor(keyAt(position))
@@ -619,6 +624,7 @@ ShellRoot {
       var next = code === 0 && lines.length > 0 ? lines[0] : null
       var wasMounted = shell.mounted
       shell.status = next
+      if (shell.mounted && shell.message === shell.closedHint) shell.message = ""
       if (shell.mounted !== wasMounted) shell.refresh()
     }
     onStartFailed: shell.cliMissing = true

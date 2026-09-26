@@ -1,4 +1,5 @@
-# Slice 6: the cycle line, the reload drawer with SmartSet and Hotkey 4 glowing, one automatic verify.
+# Slice 6: the cycle line, the reload drawer with its two steps and SmartSet and Hotkey 4 glowing,
+# the tray waiting for verify, one automatic verify.
 ipc select caps
 ipc assign esc
 shot edit
@@ -6,9 +7,17 @@ expect state-edit.json .cycle == {"kind": "edit", "pending": 1}
 status reload.json
 shot reload
 expect state-reload.json .cycle.kind == "reload" and .drawer == "reload"
+# Ejected: a click on a key names the chord that reopens the v-Drive instead of opening the drawer.
+ipc select caps
+shot reload-closed
+expect state-reload-closed.json .selected == null and .drawer == "reload" and .message == "open the v-Drive first: SmartSet + Hotkey 3"
+# The tray keeps the written changes, without their × or the write buttons, until the verify.
+ipc drawer none
+shot reload-tray
+expect state-reload-tray.json .drawer == "none" and .pending == 1
 status verify.json
 shot verify
-expect state-verify.json .cycle.kind == "verify" and .last.verb == "verify"
+expect state-verify.json .cycle.kind == "verify" and .last.verb == "verify" and .message == ""
 status verify.json
 expect calls.log [split("\n")[] | select(. == "verify")] | length == 1
 status broken.json

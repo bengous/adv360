@@ -26,7 +26,7 @@ RowLayout {
     if (kind === "broken") return "The last write to profile " + written + " failed. Restore the backup before using the keyboard."
     if (stuck) return "Written to profile " + written + ", but the v-Drive did not eject: close what uses it, then retry."
     if (kind === "write") return "Writing profile " + written + "…"
-    if (kind === "reload") return "Written to profile " + written + ". The v-Drive is ejected."
+    if (kind === "reload") return "Written to profile " + written + ". Two steps left on the keyboard:"
     if (verdict === null) return kind === "verify" ? "The v-Drive is back: checking the files…" : "Written to profile " + written + "."
     if (verdict.code !== 0) return "Verify failed: " + (verdict.report && verdict.report.message ? verdict.report.message : "adv360 verify exited " + verdict.code)
     switch (verdict.report.result) {
@@ -61,7 +61,7 @@ RowLayout {
       spacing: 8
 
       Text {
-        text: "Reload the keyboard:"
+        text: "1. Reload:"
         color: Theme.text
         font.family: Theme.font
         font.pixelSize: 15
@@ -79,14 +79,37 @@ RowLayout {
       Keycap { label: "Hotkey 4"; glow: true }
     }
 
-    Text {
+    RowLayout {
       visible: root.kind === "reload"
       Layout.fillWidth: true
-      text: "Then press SmartSet + Hotkey 3 twice to reopen the v-Drive. adv360 checks the files as soon as it mounts."
-      color: Theme.dim
-      font.family: Theme.font
-      font.pixelSize: 13
-      wrapMode: Text.Wrap
+      spacing: 8
+
+      Text {
+        text: "2. Reopen the v-Drive:"
+        color: Theme.text
+        font.family: Theme.font
+        font.pixelSize: 15
+      }
+
+      Keycap { label: "SmartSet" }
+
+      Text {
+        text: "+"
+        color: Theme.text
+        font.family: Theme.font
+        font.pixelSize: 15
+      }
+
+      Keycap { label: "Hotkey 3" }
+
+      Text {
+        Layout.fillWidth: true
+        text: "twice. adv360 checks the files and clears the changes."
+        color: Theme.text
+        font.family: Theme.font
+        font.pixelSize: 15
+        wrapMode: Text.Wrap
+      }
     }
   }
 

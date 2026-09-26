@@ -38,9 +38,10 @@ Item {
   readonly property real s: unit / 50
   readonly property real ox: placed ? (width - placed.width * unit) / 2 : 0
   readonly property real oy: placed ? (height - placed.height * unit) / 2 : 0
+  readonly property var keys: viewData && viewData.keys ? viewData.keys : keyboard ? Assign.factoryKeys(keyboard, labelMap, layerName) : []
   readonly property var byPosition: {
     var map = {}
-    if (viewData && viewData.keys) for (var i = 0; i < viewData.keys.length; i++) map[viewData.keys[i].position] = viewData.keys[i]
+    for (var i = 0; i < keys.length; i++) map[keys[i].position] = keys[i]
     return map
   }
   readonly property string layerLed: ({ base: "layd", keypad: "layk", function1: "lay1", function2: "lay2", function3: "lay3" })[layerName] || "layd"

@@ -14,6 +14,9 @@ Rectangle {
   color: Theme.tray
 
   readonly property bool conflict: app.sessionState === "conflict"
+  // The CLI refuses edits between the write and its verify, so the chips only show what went out.
+  readonly property bool awaitingVerify: app.sessionState === "applied"
+    || (app.cycle.kind === "reload" || app.cycle.kind === "verify") && app.status.pending_write.profile === app.profile
 
   // subject → value, the value drawn as a keycap tinted like the key it lands on.
   function chipOf(edit) {
@@ -43,8 +46,12 @@ Rectangle {
 
     Text {
       visible: !root.conflict
-      text: root.app.changes.length > 0 ? "Not written:" : root.app.note !== "" ? root.app.note : "Nothing to write"
-      color: root.app.changes.length === 0 && root.app.note !== "" ? Theme.pending : Theme.dim
+      text: root.awaitingVerify ? "Written, waiting for verify:"
+        : root.app.changes.length > 0 ? "Not written:"
+        : root.app.note !== "" ? root.app.note
+        : root.app.mounted ? "Nothing to write"
+        : "v-Drive closed: SmartSet + Hotkey 3 opens it"
+      color: root.awaitingVerify ? Theme.macro : root.app.changes.length === 0 && root.app.note !== "" ? Theme.pending : Theme.dim
       font.family: Theme.font
       font.pixelSize: 12
     }
@@ -121,7 +128,7 @@ Rectangle {
 
               Text {
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.app.mounted
+                visible: root.app.mounted && !root.awaitingVerify
                 text: "×"
                 color: removeArea.containsMouse ? Theme.text : Theme.dim
                 font.family: Theme.font
@@ -154,14 +161,14 @@ Rectangle {
     }
 
     Btn {
-      visible: !root.conflict
+      visible: !root.conflict && !root.awaitingVerify
       text: "Discard all"
       enabled: root.app.pending > 0
       onClicked: root.app.discardAll()
     }
 
     Btn {
-      visible: !root.conflict
+      visible: !root.conflict && !root.awaitingVerify
       text: "Write to keyboard"
       primary: true
       enabled: root.app.sessionState === "dirty" && root.app.mounted
