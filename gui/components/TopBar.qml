@@ -56,6 +56,8 @@ Rectangle {
 
     property string text: ""
     property string tag: ""
+    property string dot: ""
+    property string hint: ""
     property bool on: false
 
     signal picked()
@@ -71,9 +73,28 @@ Rectangle {
       x: 10
       spacing: 10
 
+      Rectangle {
+        visible: item.hint !== ""
+        anchors.verticalCenter: parent.verticalCenter
+        width: 8
+        height: 8
+        radius: 4
+        color: item.dot === "" ? "transparent" : item.dot
+        border.width: 1
+        border.color: item.dot === "" ? Theme.muted : item.dot
+      }
+
       Text {
         text: item.text
         color: item.enabled ? Theme.text : Theme.muted
+        font.family: Theme.font
+        font.pixelSize: 12
+      }
+
+      Text {
+        visible: item.hint !== ""
+        text: item.hint
+        color: Theme.dim
         font.family: Theme.font
         font.pixelSize: 12
       }
@@ -170,6 +191,8 @@ Rectangle {
               text: "Profile " + (index + 1)
               tag: root.active === index + 1 ? "active on the keyboard" : "SmartSet + " + (index + 1)
               on: root.app.profile === index + 1
+              dot: root.app.hints[index] ? root.app.hints[index].dot : ""
+              hint: root.app.hints[index] ? root.app.hints[index].super : ""
               onPicked: {
                 root.app.menu = ""
                 root.app.profile = index + 1

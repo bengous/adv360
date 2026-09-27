@@ -9,6 +9,7 @@ ipc menu backups
 shot backups
 ipc menu profiles
 shot profiles
+expect calls.log test("view --profile 9 --layer base")
 ipc menu none
 ipc layer function2
 shot fn2

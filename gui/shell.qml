@@ -11,6 +11,7 @@ import "edits.mjs" as Edits
 import "macro.mjs" as Macro
 import "cycle.mjs" as Cycle
 import "led.mjs" as Led
+import "hint.mjs" as Hint
 
 // The editor's state and every action on it: views bind to this object, clicks and the
 // adv360 IPC target call the same functions, and every change goes through the CLI.
@@ -43,6 +44,7 @@ ShellRoot {
   property var plan: null
   property var disk: null
   property var backups: []
+  property var hints: []
   property bool cliMissing: false
 
   property int profile: 1
@@ -95,6 +97,7 @@ ShellRoot {
   onProfileChanged: { closeDrawer(); refresh() }
   onLayerNameChanged: { closeDrawer(); refresh() }
   onModeChanged: closeDrawer()
+  onMenuChanged: if (menu === "profiles") loadHints()
   onCycleChanged: {
     if (cycle.kind !== cycleKind) {
       cycleKind = cycle.kind
@@ -583,6 +586,20 @@ ShellRoot {
       }
     })
     if (status !== null && status.stateDir) lsProcess.running = true
+  }
+
+  function loadHints() {
+    hints = []
+    if (!mounted) return
+    for (var p = 1; p <= 9; p++) {
+      (function(which) {
+        run(["view", "--profile", String(which), "--layer", "base"], function(code, lines) {
+          var next = hints.slice()
+          next[which - 1] = code === 0 && lines.length > 0 ? Hint.profileHint(lines[0], keyboard) : null
+          hints = next
+        })
+      })(p)
+    }
   }
 
   function pollStatus() {
