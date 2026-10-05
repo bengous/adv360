@@ -1,95 +1,133 @@
 # adv360
 
-Native Linux editor for the Kinesis Advantage360 with the SmartSet engine (the non-ZMK model). Kinesis ships no Linux tool and the SmartSet App breaks under Wine; the keyboard's configuration is a set of text files on its own USB volume (the v-Drive). `adv360` reads them, shows them on a rendered keyboard, edits remaps, macros, tap-and-hold and LEDs, and writes them back with a backup, an atomic write, a read-back and an eject. A human, an agent, or both can drive it: every verb is a CLI call that prints JSON.
+A native Linux editor for the Kinesis Advantage360 with the SmartSet engine (the non-ZMK model).
 
-Two parts: the `adv360` binary (Bun/TypeScript, compiled, no runtime needed) and a Quickshell GUI with its own dark palette.
+![The adv360 editor: profile 1, base layer, with the remapped keys highlighted](docs/images/overview.png)
 
-## Install on Omarchy
+Kinesis ships no Linux tool for this keyboard, and the official SmartSet App breaks under Wine. The keyboard keeps its whole configuration as small text files on its own USB volume, the v-Drive. `adv360` reads those files, draws them on a picture of your keyboard, lets you change keys, macros and LEDs, and writes them back safely.
 
-```
+## What you can do
+
+**Remap a key.** Click a key, pick its new action from the tabs below (letters, modifiers, media, mouse, layer shifts…). Every change waits in the bottom bar until you write it.
+
+**Tap & hold.** One key, two jobs: here `A` types `a` when tapped and acts as Left Ctrl when held for 200 ms.
+
+![Tap and hold editor: A on tap, Left Ctrl on hold after 200 ms](docs/images/taphold.png)
+
+**Macros.** Build a sequence of keystrokes on a trigger. Here `Ctrl + H` types `Hi`; the preview shows what the macro will type.
+
+![Macro editor: Ctrl + H types Hi](docs/images/macro.png)
+
+**LEDs.** Switch to *Lights* to choose what each indicator LED shows (layer, Caps Lock, Num Lock, profile…) and its colours.
+
+![LED editor: one colour per layer for Left LED 3](docs/images/lights.png)
+
+**Layers and profiles.** The top bar switches between the 9 profiles and the 5 layers (Base, Keypad, Fn1–Fn3). The dot next to each layer is the colour its LED shows on the keyboard.
+
+**Backups.** Every write starts with a full backup; the *Backups* menu restores any of them.
+
+## Install (Omarchy)
+
+```sh
 git clone https://github.com/bengous/adv360 ~/Work/adv360
 cd ~/Work/adv360 && ./install.sh
 ```
 
-`install.sh` builds with `bun`, installs `~/.local/bin/adv360` and `~/.local/share/adv360/`, adds an `Advantage360 editor` entry with its icon to the app launcher (`~/.local/share/applications/adv360.desktop`), and adds an `Advantage360` row to the Omarchy menu extension file. It prints the optional Hyprland bind and the optional `omarchy plugin add … --enable` command that runs `adv360 watch` as a shell service (a notification when the v-Drive mounts). It never edits Hyprland config.
+You need `bun` to build (`mise use -g bun`) and `quickshell` for the window. The script installs:
 
-## Choreography
+- the `adv360` command in `~/.local/bin/` and its files in `~/.local/share/adv360/`;
+- an *Advantage360 editor* entry in the app launcher;
+- an *Advantage360* row in the Omarchy menu.
 
-The keyboard opens, reloads and closes its own volume; only the human can press these chords.
+It never edits your Hyprland config. It prints two optional extras for you to add yourself:
 
-| Step | Chord | What happens |
-|---|---|---|
-| Open the v-Drive | `SmartSet + Hotkey 3` | LEDs flash, the volume `ADV360` mounts, `adv360 vdrive status` says `mounted` |
-| Edit | `adv360 gui` or `adv360 session …` | edits live in a session file, the keyboard is untouched |
-| Apply | `adv360 apply --profile N` | backup, write, read back, eject; the drive shows `ejected` |
-| Reload | `SmartSet + Hotkey 4` | the keyboard reads the new files |
-| Reopen and verify | `SmartSet + Hotkey 3` twice, then `adv360 verify` | the tool compares the files with what it wrote |
-| Close | `SmartSet + Hotkey 3` | after `adv360 vdrive eject` |
-| Switch profile | `SmartSet + <digit>` | the tool shows the active profile with a star |
-
-`vdrive status` always carries `next`, the chord or command to do next. Test on a spare profile (9); profile 1 is the daily layout.
-
-## Safety guarantees
-
-- Never writes `settings.txt` or anything under `firmware/`.
-- Never mounts the v-Drive; the only volume command is `udisksctl unmount`.
-- Backup of `layouts/ lighting/ settings/` before every write, under `~/.local/state/adv360/backups/<timestamp>/`.
-- Atomic write: temp file on the same volume, fsync, rename, fsync of the directory, read-back and compare, then eject.
-- One write cycle at a time (`~/.local/state/adv360/write.json` is the lock); a mismatch after reload marks the drive `corrupt-suspected` and points at the backup.
-- Untouched files round-trip byte for byte (CRLF kept); unknown tokens are kept and shown raw.
-
-## Commands
-
-| Command | Does |
-|---|---|
-| `adv360 vdrive status` | composed state `absent / mounted / ejected / busy-writing / corrupt-suspected`, active profile, firmware, `next` |
-| `adv360 vdrive eject` | `udisksctl unmount`, then the human closes the drive |
-| `adv360 inspect [--profile N]` | every line of every layout and led file, with warnings |
-| `adv360 view --profile N --layer base\|kp\|fn1\|fn2\|fn3` | the effective action per key, macros on their trigger, pending edits marked |
-| `adv360 session set-remap\|set-taphold\|set-macro\|remove\|set-led\|load-file\|discard\|status --profile N …` | edit session, see `adv360` with no verb for the flags |
-| `adv360 diff --profile N` | unified diff of the session against the disk |
-| `adv360 apply --profile N [--dry-run]` | the write cycle; the plan line names every side effect first; the report ends with `outcome` (`ejected` with the next chord, or `verified-by-readback` under `--source`) |
-| `adv360 verify` | after the reload and reopen: `verified`, `unchanged` or `mismatch` |
-| `adv360 backup` | copy the three folders to the state dir |
-| `adv360 restore <backup-dir-or-file> --profile N` | open a session that replaces the profile's files; apply writes it |
-| `adv360 watch` | one JSON line per change; notification on mount |
-| `adv360 gui` | the Quickshell editor |
-
-Every verb accepts `--source DIR` (or `ADV360_SOURCE=DIR`) to work on a copy instead of the mounted drive. Output: one JSON object per line; exit 0, 1 with `{"error":"<name>","message":…}`, 2 on usage. Details: `docs/capabilities.md`.
-
-Example, from a terminal, with the v-Drive open:
-
+```lua
+-- ~/.config/hypr/bindings.lua: open the editor with Super + Shift + K
+o.bind("SUPER + SHIFT + K", "Advantage360 editor", "adv360 gui")
 ```
+
+```sh
+# a notification when the v-Drive opens, even with the editor closed
+omarchy plugin add ~/Work/adv360 --enable
+```
+
+To update, `git pull` and run `./install.sh` again.
+
+## Your first change
+
+The keyboard decides when its v-Drive is open; only you can press its chords. The editor shows the next step at all times, in the top-right line *Open → Edit → Write → Reload → Verify*.
+
+1. **Open the v-Drive.** Hold `SmartSet` and press `Hotkey 3`. The LEDs flash and the editor reads the files.
+2. **Edit.** Run `adv360 gui` (or `Super + Shift + K`). Click keys, build macros, set LEDs. Nothing touches the keyboard yet.
+3. **Review and write.** Click *Write to keyboard*. The review lists each change and every step the write will take.
+
+   ![Review before writing: three changes and the four steps of the write](docs/images/review.png)
+
+4. **Reload.** After the write, the editor ejects the v-Drive and shows the chord to press: `SmartSet` + `Hotkey 4`.
+
+   ![After the write: the editor highlights SmartSet and Hotkey 4 on the drawn keyboard](docs/images/reload.png)
+
+5. **Verify.** Press `SmartSet` + `Hotkey 3` twice to reopen the v-Drive. The editor checks the files against what it wrote and clears the changes.
+
+Try new ideas on a spare profile first (profile 9 is a good one): `SmartSet` + a digit switches profiles, and profile 1 is the one you type on every day.
+
+## Why it is safe
+
+- A full backup of `layouts/`, `lighting/` and `settings/` before every write, in `~/.local/state/adv360/backups/`.
+- Each file is written to a temporary copy on the keyboard, synced, renamed into place, then read back and compared.
+- It never writes `settings.txt` or the firmware, and never mounts the drive. The only drive command it runs is the eject.
+- Files you did not change stay byte for byte the same. Actions it does not recognise are kept and shown as raw text.
+- One write at a time. If the files look wrong after a reload, the editor says so and points at the backup to restore.
+
+## From the terminal
+
+Everything the window does is also a command, and every command prints JSON, so scripts and AI agents can drive the keyboard too.
+
+```sh
+adv360 vdrive status                      # is the v-Drive open, which profile is active, what to do next
 adv360 session set-remap --profile 9 --layer base --pos caps --action esc
-adv360 diff --profile 9
-adv360 apply --profile 9
+adv360 diff --profile 9                   # what will change
+adv360 apply --profile 9                  # backup, write, read back, eject
 # press SmartSet + Hotkey 4, then SmartSet + Hotkey 3 twice
 adv360 verify
 ```
 
-## State dir
+| Command | What it does |
+|---|---|
+| `adv360 gui` | opens the editor |
+| `adv360 vdrive status` | drive state (`absent`, `mounted`, `ejected`, `busy-writing`, `corrupt-suspected`), active profile, firmware, and `next`: the chord or command to do next |
+| `adv360 vdrive eject` | ejects the drive |
+| `adv360 inspect [--profile N]` | every line of every layout and LED file, with warnings |
+| `adv360 view --profile N --layer base\|kp\|fn1\|fn2\|fn3` | what each key does on that layer |
+| `adv360 session set-remap\|set-taphold\|set-macro\|remove\|set-led\|load-file\|discard\|status --profile N …` | prepare changes without touching the keyboard; `adv360` alone lists the flags |
+| `adv360 diff --profile N` | the pending changes as a text diff |
+| `adv360 apply --profile N [--dry-run]` | writes the pending changes; the first line names every side effect |
+| `adv360 verify` | after reload and reopen: `verified`, `unchanged` or `mismatch` |
+| `adv360 backup` | a backup now |
+| `adv360 restore <backup> --profile N` | prepares a restore; `apply` writes it |
+| `adv360 watch` | one JSON line per drive change, a notification when it opens |
 
-`~/.local/state/adv360/` (`$XDG_STATE_HOME/adv360`): `sessions/profile-N.json`, `write.json`, `backups/<timestamp>/`, `tmp/`.
+Add `--source DIR` (or `ADV360_SOURCE=DIR`) to any command to work on a copy of the files instead of the keyboard. Exit codes: `0` ok, `1` a named error (`{"error": …, "message": …}`), `2` bad usage. Full reference: [`docs/capabilities.md`](docs/capabilities.md).
 
-## Dependencies
+## Requirements
 
-| Tool | Used for | When missing |
+| Tool | Used for | If it is missing |
 |---|---|---|
-| `lsblk` | finding the `ADV360` volume | error `lsblk-missing` |
-| `udisksctl` | eject | error `udisksctl-missing` at eject time; the write already happened, `apply` again retries the eject |
-| `diff` (GNU) | `diff` verb | error `diff-failed` |
-| `quickshell` | the GUI | error `quickshell-missing` / `gui-files-missing`; the CLI works without them |
-| `omarchy-notification-send` | notifications | a warning on stderr, nothing else |
 | `bun` | building only | `install.sh` stops |
+| `quickshell` | the editor window | `adv360 gui` says so; the commands still work |
+| `lsblk` | finding the `ADV360` drive | error `lsblk-missing` |
+| `udisksctl` | ejecting | error `udisksctl-missing`; the write is done, run `apply` again to retry the eject |
+| `diff` (GNU) | `adv360 diff` | error `diff-failed` |
+| `omarchy-notification-send` | notifications | a warning, nothing else |
 
 ## Status
 
-Validated on a real Advantage360 (firmware 1.0.69) on 2026-09-13: a remap written to profile 9, reloaded, verified, then restored from the backup and verified again, with profile 1 untouched.
+Tested on a real Advantage360 (firmware 1.0.69) on 2026-09-13: a remap written to profile 9, reloaded and verified, then restored from the backup and verified again, with profile 1 untouched.
 
 ## Development
 
-`bun run check` (format, lint, import direction between `src/model`, `src/io`, `src/app` and `src/cli`, typecheck, tests, qmllint, shellcheck, version match). Visual checks never open a window on your workspaces: `tools/gui-shot.sh <out-dir> tests/gui/<n>.shot` draws the GUI on a headless Hyprland output far from your monitors, drives it through its IPC and captures it with `grim`; `tools/gui-shot.sh --teardown` removes that output. Real keyboard files under `tests/fixtures/real/` are byte-for-byte copies and never change. Vocabulary in `CONTEXT.md`, rules in `AGENTS.md`.
+`bun run check` runs everything: format, lint, layer imports, types, tests, QML lint, shellcheck. To see the window without opening it on your desktop, `tools/gui-shot.sh <out-dir> tests/gui/<n>.shot` draws it on a hidden screen, drives it and saves screenshots; `tools/gui-shot.sh --teardown` removes that screen. The README images come from `tests/gui/readme.shot`. Vocabulary is in [`CONTEXT.md`](CONTEXT.md), project rules in [`AGENTS.md`](AGENTS.md).
 
 ## License
 
-MIT, see `LICENSE`. Independent project, not affiliated with or endorsed by Kinesis Corporation. Kinesis, Advantage360 and SmartSet are trademarks of Kinesis Corporation.
+MIT, see [`LICENSE`](LICENSE). Independent project, not affiliated with or endorsed by Kinesis Corporation. Kinesis, Advantage360 and SmartSet are trademarks of Kinesis Corporation.

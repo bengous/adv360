@@ -1,0 +1,29 @@
+# README screenshots: tools/gui-shot.sh <out-dir> tests/gui/readme.shot, then copy overview, taphold, macro, lights, review and reload to docs/images/.
+shot overview
+ipc select caps
+ipc assign esc
+ipc select a
+ipc drawer taphold
+ipc slot hold
+ipc assign lctr
+ipc set delay 200
+shot taphold
+ipc select h
+ipc drawer macro
+ipc set speed 5
+ipc slot tap
+ipc assign -lshf
+ipc assign h
+ipc assign +lshf
+ipc assign i
+ipc set cotrigger lctr
+shot macro
+ipc drawer review
+shot review
+ipc drawer none
+ipc mode lights
+ipc selectLed IND3
+shot lights
+ipc mode keys
+status reload.json
+shot reload
