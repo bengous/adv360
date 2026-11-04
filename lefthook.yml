@@ -3,3 +3,9 @@ pre-commit:
     fix-and-format:
       run: .claude/hooks/fix-and-format.sh --commit {staged_files}
       stage_fixed: true
+
+pre-push:
+  commands:
+    # Every commit not yet on origin/main, before it reaches the public mirror.
+    gitleaks:
+      run: gitleaks git --no-banner --redact --log-opts="origin/main..HEAD" .
