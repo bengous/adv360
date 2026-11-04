@@ -6,6 +6,6 @@ pre-commit:
 
 pre-push:
   commands:
-    # Every commit not yet on origin/main, before it reaches the public mirror.
+    # Every local commit no origin ref holds, whichever branch is pushed.
     gitleaks:
-      run: gitleaks git --no-banner --redact --log-opts="origin/main..HEAD" .
+      run: gitleaks git --no-banner --redact --log-opts="--branches --not --remotes=origin" .

@@ -187,7 +187,6 @@ export default defineConfig({
       { max: 150, skipBlankLines: true, skipComments: true },
     ],
 
-    // Shared with the dotfiles repo's oxlint.config.ts and oxlint.style.config.ts.
     "eslint/arrow-body-style": "error",
     "eslint/func-style": [
       "error",
