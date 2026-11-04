@@ -126,7 +126,7 @@ Tested on a real Advantage360 (firmware 1.0.69) on 2026-09-13: a remap written t
 
 ## Development
 
-`bun run check` runs everything: format, lint, layer imports, types, tests, QML lint, shellcheck. To see the window without opening it on your desktop, `tools/gui-shot.sh <out-dir> tests/gui/<n>.shot` draws it on a hidden screen, drives it and saves screenshots; `tools/gui-shot.sh --teardown` removes that screen. The README images come from `tests/gui/readme.shot`. Vocabulary is in [`CONTEXT.md`](CONTEXT.md), project rules in [`AGENTS.md`](AGENTS.md).
+`bun run check` runs everything: format, lint, lint-disable reasons, layer imports, types, tests, QML lint, shellcheck, `zizmor` on the workflows (its online audits need `GH_TOKEN` exported, as CI has), `pinact` on the action pins. The pre-push hook runs `gitleaks` on the commits a push brings that no remote-tracking branch holds; `tools/publish-public.sh` scans the whole mirror before it pushes. To see the window without opening it on your desktop, `tools/gui-shot.sh <out-dir> tests/gui/<n>.shot` draws it on a hidden screen, drives it and saves screenshots; `tools/gui-shot.sh --teardown` removes that screen. The README images come from `tests/gui/readme.shot`. Vocabulary is in [`CONTEXT.md`](CONTEXT.md), project rules in [`AGENTS.md`](AGENTS.md).
 
 ## License
 

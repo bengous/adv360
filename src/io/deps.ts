@@ -16,17 +16,17 @@ export type Urgency = "low" | "normal" | "critical";
 export type Deps = {
   stateDir: string;
   sourceEnv: string | null;
-  observe(): Promise<Observation>;
-  unmount(device: string): Promise<void>;
-  notify(
+  observe: () => Promise<Observation>;
+  unmount: (device: string) => Promise<void>;
+  notify: (
     headline: string,
     description: string,
     urgency: Urgency,
-  ): Promise<void>;
-  now(): Date;
-  sleep(ms: number): Promise<void>;
-  emit(line: string): void;
-  warn(line: string): void;
+  ) => Promise<void>;
+  now: () => Date;
+  sleep: (ms: number) => Promise<void>;
+  emit: (line: string) => void;
+  warn: (line: string) => void;
 };
 
 const SPAWN_TIMEOUT_MS = 10_000;

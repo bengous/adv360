@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "check": "oxfmt --check && bun run lint && tools/check-layers.sh && tsc --noEmit && bun test && ! grep -rn '^import qs\\.' gui && /usr/lib/qt6/bin/qmllint gui/*.qml gui/theme/*.qml gui/controls/*.qml gui/components/*.qml && /usr/lib/qt6/bin/qmllint -I \"${OMARCHY_PATH:-/usr/share/omarchy}/shell\" omarchy/*.qml && shellcheck install.sh .claude/hooks/fix-and-format.sh tools/*.sh && [ \"$(jq -r .version manifest.json)\" = \"$(jq -r .version package.json)\" ] && bun run validate-plugin",
+    "check": "oxfmt --check && bun run lint && tools/check-lint-disables.sh && tools/check-layers.sh && tsc --noEmit && bun test && ! grep -rn '^import qs\\.' gui && /usr/lib/qt6/bin/qmllint gui/*.qml gui/theme/*.qml gui/controls/*.qml gui/components/*.qml && /usr/lib/qt6/bin/qmllint -I \"${OMARCHY_PATH:-/usr/share/omarchy}/shell\" omarchy/*.qml && shellcheck install.sh .claude/hooks/fix-and-format.sh .lefthook/pre-push/*.sh tools/*.sh && zizmor --quiet .github/workflows && pinact run --check --verify-comment && [ \"$(jq -r .version manifest.json)\" = \"$(jq -r .version package.json)\" ] && bun run validate-plugin",
     "validate-plugin": "d=$(mktemp -d) && git clone -q . \"$d/plugin\" && omarchy-plugin-validate \"$d/plugin\"; s=$?; rm -rf \"$d\"; exit $s",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
@@ -14,13 +14,13 @@
     "fmt:check": "oxfmt --check"
   },
   "devDependencies": {
-    "@oxlint/plugins": "1.82.0",
-    "@types/bun": "1.4.3",
-    "lefthook": "2.1.12",
-    "oxfmt": "0.67.0",
-    "oxlint": "1.82.0",
-    "oxlint-tsgolint": "7.0.2001",
+    "@oxlint/plugins": "1.90.0",
+    "@types/bun": "1.4.4",
+    "lefthook": "2.2.2",
+    "oxfmt": "0.75.0",
+    "oxlint": "1.90.0",
+    "oxlint-tsgolint": "7.0.2005",
     "typescript": "7.0.2"
   },
-  "packageManager": "bun@1.4.3"
+  "packageManager": "bun@1.4.4"
 }

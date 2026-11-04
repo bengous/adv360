@@ -3,3 +3,12 @@ pre-commit:
     fix-and-format:
       run: .claude/hooks/fix-and-format.sh --commit {staged_files}
       stage_fixed: true
+
+# A script job reading git's pushed-ref lines, after claude-code-plugins: a run
+# job is skipped when `git diff HEAD @{push}` lists no file.
+pre-push:
+  jobs:
+    - name: gitleaks
+      script: gitleaks.sh
+      runner: bash
+      use_stdin: true

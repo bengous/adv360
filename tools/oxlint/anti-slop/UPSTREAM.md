@@ -1,6 +1,6 @@
 # Vendored anti-slop
 
-Source: [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop) (MIT), commit `c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b`, path `skills/install-anti-slop/assets/anti-slop`, copied on 2026-09-13 with the upstream `scripts/install.mjs`.
+Source: [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop) (MIT), commit `13909c9e07590f5a85d93c62712259fe14a883f7`, path `skills/install-anti-slop/assets/anti-slop`, updated through the upstream `references/update.md` procedure (three-way merge from base `c44ef22`, no local change to keep).
 
 Excluded: `effect/` (the opt-in Effect plugin; this repository has no `effect` dependency).
 
