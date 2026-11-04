@@ -61,3 +61,11 @@ jobs:
       - name: Check formatting
         if: ${{ !cancelled() }}
         run: bun run fmt:check
+
+      - name: Check lint disables
+        if: ${{ !cancelled() }}
+        run: tools/check-lint-disables.sh
+
+      - name: Check layers
+        if: ${{ !cancelled() }}
+        run: tools/check-layers.sh
