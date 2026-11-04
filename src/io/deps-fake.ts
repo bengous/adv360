@@ -54,12 +54,20 @@ function sleepFake(fake: FakeDeps, ms: number): Promise<void> {
 }
 
 // The clock ticks one second per call, so two stamps in one run never collide.
+function tickingClock(): () => Date {
+  let tick = 0;
+
+  return () => {
+    tick += 1;
+
+    return new Date(Date.UTC(2026, 8, 13, 12, 0, tick - 1));
+  };
+}
+
 export function fakeDeps(
   stateDir: string,
   devices: BlockDevice[] = [],
 ): FakeDeps {
-  let tick = 0;
-
   const fake: FakeDeps = {
     stateDir,
     sourceEnv: null,
@@ -79,7 +87,7 @@ export function fakeDeps(
 
       return Promise.resolve();
     },
-    now: () => new Date(Date.UTC(2026, 8, 13, 12, 0, tick++)),
+    now: tickingClock(),
     sleep: (ms) => sleepFake(fake, ms),
     emit: (line) => void fake.lines.push(line),
     warn: (line) => void fake.warnings.push(line),

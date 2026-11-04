@@ -23,9 +23,9 @@ export function dominantEol(lines: readonly RawLine[]): Eol {
 
   for (const { raw } of lines) {
     if (raw.endsWith("\r\n")) {
-      crlf++;
+      crlf += 1;
     } else if (raw.endsWith("\n")) {
-      lf++;
+      lf += 1;
     }
   }
 

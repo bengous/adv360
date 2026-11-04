@@ -33,15 +33,17 @@ export function pendingRecord(record: WriteRecord | null): WriteRecord {
 }
 
 // verified: every file hashes as written; unchanged: as before the write; else mismatch.
+function verifyResult(files: readonly VerifiedFile[]): VerifyResult {
+  if (files.every((f) => f.actual === f.expected)) {
+    return "verified";
+  }
+
+  return files.every((f) => f.actual === f.before) ? "unchanged" : "mismatch";
+}
+
 export function decideVerify(
   record: WriteRecord,
   files: VerifiedFile[],
 ): Verdict {
-  const result: VerifyResult = files.every((f) => f.actual === f.expected)
-    ? "verified"
-    : files.every((f) => f.actual === f.before)
-      ? "unchanged"
-      : "mismatch";
-
-  return { record, result, files };
+  return { record, result: verifyResult(files), files };
 }

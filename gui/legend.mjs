@@ -10,7 +10,7 @@ function split(label) {
   const pieces = label.match(/[^ +]+\+?|\s+/g) ?? [label];
   let best = [label];
 
-  for (let i = 1; i < pieces.length; i++) {
+  for (let i = 1; i < pieces.length; i += 1) {
     const a = pieces.slice(0, i).join("").trim();
     const b = pieces.slice(i).join("").trim();
 
