@@ -4,8 +4,11 @@ pre-commit:
       run: .claude/hooks/fix-and-format.sh --commit {staged_files}
       stage_fixed: true
 
+# A script job reading git's pushed-ref lines, after claude-code-plugins: a run
+# job is skipped when `git diff HEAD @{push}` lists no file.
 pre-push:
-  commands:
-    # Every local commit no origin ref holds, whichever branch is pushed.
-    gitleaks:
-      run: gitleaks git --no-banner --redact --log-opts="--branches --not --remotes=origin" .
+  jobs:
+    - name: gitleaks
+      script: gitleaks.sh
+      runner: bash
+      use_stdin: true
